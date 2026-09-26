@@ -1,0 +1,38 @@
+---
+description: Check architecture, contracts, and Go quality before changing backend code
+alwaysApply: true
+---
+
+# Before changing Go backend code
+
+1. Read the existing architecture and the call path you are about to touch.
+2. Check related Go files, DB functions, and the API flow before editing.
+3. Do not change a DB or API contract until every handler, query, and caller that depends on it is identified.
+4. Write production-quality Go: small functions, explicit types, and no silent failures.
+5. Handle every error. Return it with context, or handle it. Never discard it with `_`.
+6. Check nil pointers, nil maps, and missing request fields before use.
+7. Check concurrency: shared state, goroutines, locks, and context cancellation.
+8. Add or update unit tests for the behavior you change.
+9. From `backend-go`, run and fix:
+
+```
+go test ./...
+go vet ./...
+golangci-lint run
+```
+
+```go
+// Bad
+player, _ := repo.GetPlayer(ctx, id)
+return player.Name, nil
+
+// Good
+player, err := repo.GetPlayer(ctx, id)
+if err != nil {
+    return "", fmt.Errorf("get player %s: %w", id, err)
+}
+if player == nil {
+    return "", ErrNotFound
+}
+return player.Name, nil
+```

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+backend-go/.env
+backend-go/tmp/
+backend-go/uploads/*
+!backend-go/uploads/.gitkeep
+*.exe
+challenger-cc-backend
+.vercel

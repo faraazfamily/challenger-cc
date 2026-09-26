@@ -1,0 +1,18 @@
+---
+description: Review, test, branch, and commit after implementation; never push to production
+alwaysApply: true
+---
+
+# After implementation
+
+1. Review the diff yourself. Look for regressions in related handlers, DB functions, and callers.
+2. Run the full test suite (`go test ./...`, `go vet ./...`, `golangci-lint run` in `backend-go`) and fix failures.
+3. Show exactly what changed: files, behavior, and test results.
+4. Do not push to production or to the default branch.
+5. Put the work on a new branch and commit it. Push only when asked.
+
+```
+git checkout -b <short-topic-branch>
+git add <relevant files>
+git commit -m "<why the change was made>"
+```

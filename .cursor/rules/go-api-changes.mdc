@@ -1,0 +1,32 @@
+---
+description: Checklist for Go API models, auth, queries, and failure-path tests
+alwaysApply: true
+---
+
+# API changes
+
+When changing a route, handler, or request/response type:
+
+1. Check request and response models and every user of those types.
+2. Check authentication and JWT validation on the route.
+3. Check authorization for the role or resource being accessed.
+4. Check the database queries and functions the handler calls.
+5. Test the success case.
+6. Test validation failure (400).
+7. Test an unauthorized request (401 or 403).
+8. Test empty or null body and fields.
+9. Test a duplicate request.
+10. Test supplier or upstream API failure.
+
+```go
+func TestCreateMatch(t *testing.T) {
+    tests := []struct {
+        name string
+        // success, invalid body, missing JWT, empty fields,
+        // duplicate submit, upstream/supplier error
+    }{}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) { /* assert status and body */ })
+    }
+}
+```
