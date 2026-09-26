@@ -18,14 +18,18 @@ type Server struct {
 
 // CORSMiddleware allows the React frontend (on a different port in dev) to call this API.
 func CORSMiddleware(clientURL string) gin.HandlerFunc {
-	origin := clientURL
-	if origin == "" {
-		origin = "*"
-	}
 	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin == "" {
+			origin = clientURL
+		}
+		if origin == "" {
+			origin = "*"
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		c.Writer.Header().Set("Vary", "Origin")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Bypass-Tunnel-Reminder")
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(http.StatusNoContent)
 			return

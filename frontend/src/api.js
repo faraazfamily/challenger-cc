@@ -1,8 +1,10 @@
-const BASE = ''; // Vite proxy forwards /api to the backend in dev; set full URL in prod build if needed
+const BASE = import.meta.env.VITE_API_URL || '';
 
 function authHeaders() {
   const token = localStorage.getItem('cc_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  const headers = { 'Bypass-Tunnel-Reminder': 'true' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
 }
 
 async function handle(res) {
@@ -16,25 +18,25 @@ export const api = {
   login: (username, password) =>
     fetch(`${BASE}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ username, password }),
     }).then(handle),
 
   memberLogin: (name) =>
     fetch(`${BASE}/api/members/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ name }),
     }).then(handle),
 
   // Team
-  getTeam: () => fetch(`${BASE}/api/team`).then(handle),
+  getTeam: () => fetch(`${BASE}/api/team`, { headers: authHeaders() }).then(handle),
   updateTeam: (formData) =>
     fetch(`${BASE}/api/team`, { method: 'PUT', headers: { ...authHeaders() }, body: formData }).then(handle),
 
   // Players
-  getPlayers: () => fetch(`${BASE}/api/players`).then(handle),
-  getPlayer: (id) => fetch(`${BASE}/api/players/${id}`).then(handle),
+  getPlayers: () => fetch(`${BASE}/api/players`, { headers: authHeaders() }).then(handle),
+  getPlayer: (id) => fetch(`${BASE}/api/players/${id}`, { headers: authHeaders() }).then(handle),
   createPlayer: (formData) =>
     fetch(`${BASE}/api/players`, { method: 'POST', headers: { ...authHeaders() }, body: formData }).then(handle),
   updatePlayer: (id, formData) =>
@@ -43,7 +45,7 @@ export const api = {
     fetch(`${BASE}/api/players/${id}`, { method: 'DELETE', headers: { ...authHeaders() } }).then(handle),
 
   // Tournaments
-  getTournaments: () => fetch(`${BASE}/api/tournaments`).then(handle),
+  getTournaments: () => fetch(`${BASE}/api/tournaments`, { headers: authHeaders() }).then(handle),
   createTournament: (payload) =>
     fetch(`${BASE}/api/tournaments`, {
       method: 'POST',
@@ -60,8 +62,8 @@ export const api = {
     fetch(`${BASE}/api/tournaments/${id}`, { method: 'DELETE', headers: { ...authHeaders() } }).then(handle),
 
   // Matches
-  getMatches: () => fetch(`${BASE}/api/matches`).then(handle),
-  getMatch: (id) => fetch(`${BASE}/api/matches/${id}`).then(handle),
+  getMatches: () => fetch(`${BASE}/api/matches`, { headers: authHeaders() }).then(handle),
+  getMatch: (id) => fetch(`${BASE}/api/matches/${id}`, { headers: authHeaders() }).then(handle),
   createMatch: (payload) =>
     fetch(`${BASE}/api/matches`, {
       method: 'POST',
@@ -90,8 +92,8 @@ export const api = {
     fetch(`${BASE}/api/scorecards/${matchId}/upload`, { method: 'POST', headers: { ...authHeaders() }, body: formData }).then(handle),
 
   // Stats
-  getLeaderboard: () => fetch(`${BASE}/api/stats/leaderboard`).then(handle),
-  getTeamRecord: () => fetch(`${BASE}/api/stats/team-record`).then(handle),
+  getLeaderboard: () => fetch(`${BASE}/api/stats/leaderboard`, { headers: authHeaders() }).then(handle),
+  getTeamRecord: () => fetch(`${BASE}/api/stats/team-record`, { headers: authHeaders() }).then(handle),
 };
 
 export function isLoggedIn() {
