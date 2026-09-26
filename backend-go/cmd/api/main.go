@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -28,18 +29,23 @@ func main() {
 		log.Fatal("JWT_SECRET is not set")
 	}
 
+	uploadDir := "uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		uploadDir = filepath.Join(os.TempDir(), "uploads")
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			log.Fatalf("failed to create uploads dir: %v", err)
+		}
+	}
+
 	srv := &server.Server{
 		DB:        db.Pool,
 		JWTSecret: jwtSecret,
-		UploadDir: "uploads",
-	}
-	if err := os.MkdirAll(srv.UploadDir, 0755); err != nil {
-		log.Fatalf("failed to create uploads dir: %v", err)
+		UploadDir: uploadDir,
 	}
 
 	r := gin.Default()
 	r.Use(server.CORSMiddleware(os.Getenv("CLIENT_URL")))
-	r.Static("/uploads", "./uploads")
+	r.Static("/uploads", uploadDir)
 
 	srv.RegisterRoutes(r)
 
