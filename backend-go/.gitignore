@@ -2,3 +2,5 @@
 uploads/*
 !uploads/.gitkeep
 challenger-cc-backend
+
+.vercel

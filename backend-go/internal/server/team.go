@@ -3,9 +3,7 @@ package server
 import (
 	"database/sql"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,10 +50,10 @@ func (s *Server) UpdateTeam(c *gin.Context) {
 
 	logoURL := c.PostForm("existing_logo_url")
 	if file, err := c.FormFile("logo"); err == nil && file != nil {
-		filename := strconv.FormatInt(time.Now().UnixNano(), 10) + filepath.Ext(file.Filename)
-		dst := filepath.Join(s.UploadDir, filename)
-		if err := c.SaveUploadedFile(file, dst); err == nil {
-			logoURL = "/uploads/" + filename
+		if url, err := s.storeImage(file); err == nil {
+			logoURL = url
+		} else {
+			_ = c.Error(err)
 		}
 	}
 

@@ -1,0 +1,17 @@
+# Render Blueprint: creates the Go API as a free web service.
+# Database = Neon (already created); frontend = Vercel (already deployed).
+services:
+  - type: web
+    name: challenger-cc-api
+    runtime: docker
+    rootDir: backend-go
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: virginia            # same region as the Neon database (us-east-1) => fast queries
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL       # paste your Neon connection string when Render asks
+        sync: false
+      - key: JWT_SECRET         # generated for you
+        generateValue: true

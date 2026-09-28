@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../api';
+import { api, assetUrl } from '../api';
 
 const BLANK = { name: '', role: 'Batsman', batting_style: '', bowling_style: '', jersey_number: '', bio: '', fielding_notes: '', is_captain: false, is_vice_captain: false, is_wicketkeeper: false };
 const ROLES = ['Batsman', 'Bowler', 'All-rounder', 'Wicketkeeper'];
@@ -83,7 +83,7 @@ export default function AdminPlayers() {
       existing_photo_url: p.photo_url,
     });
     setPhoto(null);
-    setPreview(p.photo_url || '');
+    setPreview(assetUrl(p.photo_url) || '');
     setError('');
     setOpen(true);
   }

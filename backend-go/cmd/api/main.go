@@ -45,7 +45,6 @@ func main() {
 
 	r := gin.Default()
 	r.Use(server.CORSMiddleware(os.Getenv("CLIENT_URL")))
-	r.Static("/uploads", uploadDir)
 
 	srv.RegisterRoutes(r)
 

@@ -4,9 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -147,19 +145,19 @@ func (s *Server) attachCareer(player gin.H, id interface{}) error {
 	return nil
 }
 
-// saveUploadedPhoto saves a multipart "photo" field to disk, if present.
+// saveUploadedPhoto stores a multipart "photo" field in the database, if present.
 // Returns ("", false) when no file was uploaded (not an error — photo is optional).
 func saveUploadedPhoto(c *gin.Context, s *Server, field string) (string, bool) {
 	file, err := c.FormFile(field)
 	if err != nil {
 		return "", false
 	}
-	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + filepath.Ext(file.Filename)
-	dst := filepath.Join(s.UploadDir, filename)
-	if err := c.SaveUploadedFile(file, dst); err != nil {
+	url, err := s.storeImage(file)
+	if err != nil {
+		_ = c.Error(err) // shows up in the server log
 		return "", false
 	}
-	return "/uploads/" + filename, true
+	return url, true
 }
 
 // otherLeader reports who already holds captain or vice-captain, excluding the player being edited.

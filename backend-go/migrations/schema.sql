@@ -96,3 +96,12 @@ ALTER TABLE players ADD COLUMN IF NOT EXISTS is_wicketkeeper BOOLEAN DEFAULT FAL
 CREATE INDEX IF NOT EXISTS idx_batting_player ON batting_stats(player_id);
 CREATE INDEX IF NOT EXISTS idx_bowling_player ON bowling_stats(player_id);
 CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
+
+-- Uploaded photos / scorecard PDFs live in Postgres so they survive redeploys
+-- on hosts with an ephemeral disk (served at /uploads/<name>).
+CREATE TABLE IF NOT EXISTS files (
+    name TEXT PRIMARY KEY,
+    content_type TEXT NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);

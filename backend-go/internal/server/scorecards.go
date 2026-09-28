@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"io"
 	"net/http"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -22,7 +20,7 @@ import (
 func (s *Server) UploadScorecard(c *gin.Context) {
 	matchID := c.Param("matchId")
 
-	file, header, err := c.Request.FormFile("scorecard")
+	file, _, err := c.Request.FormFile("scorecard")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No PDF file uploaded"})
 		return
@@ -35,13 +33,11 @@ func (s *Server) UploadScorecard(c *gin.Context) {
 		return
 	}
 
-	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + filepath.Ext(header.Filename)
-	dst := filepath.Join(s.UploadDir, filename)
-	if err := writeFile(dst, fileBytes); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+	pdfURL, err := s.storePDF(fileBytes)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file: " + err.Error()})
 		return
 	}
-	pdfURL := "/uploads/" + filename
 
 	result, err := pdfparser.Parse(fileBytes, int64(len(fileBytes)))
 	if err != nil {
@@ -128,7 +124,7 @@ func (s *Server) UploadScorecard(c *gin.Context) {
 // Reads both teams from the PDF ("X v/s Y"), creates the match, and saves
 // stats only for names that exactly match the squad. Nothing is left to edit.
 func (s *Server) ImportScorecard(c *gin.Context) {
-	file, header, err := c.Request.FormFile("scorecard")
+	file, _, err := c.Request.FormFile("scorecard")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No PDF file uploaded"})
 		return
@@ -246,13 +242,11 @@ func (s *Server) ImportScorecard(c *gin.Context) {
 		return
 	}
 
-	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + filepath.Ext(header.Filename)
-	dst := filepath.Join(s.UploadDir, filename)
-	if err := writeFile(dst, fileBytes); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file"})
+	pdfURL, err := s.storePDF(fileBytes)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded file: " + err.Error()})
 		return
 	}
-	pdfURL := "/uploads/" + filename
 
 	tx, err := s.DB.Begin()
 	if err != nil {

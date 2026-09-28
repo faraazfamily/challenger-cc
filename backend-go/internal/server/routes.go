@@ -12,7 +12,12 @@ import (
 func (s *Server) RegisterRoutes(r *gin.Engine) {
 	auth := middleware.RequireAuth(s.JWTSecret)
 
+	// Health check for the host / uptime monitor. Deliberately does NOT touch the
+	// database, so pinging it never wakes (or bills) the serverless Postgres.
 	r.GET("/api/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+
+	// Uploaded photos / PDFs (stored in Postgres, see files.go)
+	r.GET("/uploads/:name", s.ServeUpload)
 
 	r.POST("/api/auth/login", s.Login)
 	r.POST("/api/members/login", s.MemberLogin)

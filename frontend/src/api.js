@@ -1,10 +1,15 @@
-const BASE = import.meta.env.VITE_API_URL || '';
+const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+// Photos are served by the API server (/uploads/...), not by the website host,
+// so they need the API address in front when the two live on different domains.
+export function assetUrl(path) {
+  if (path && path.startsWith('/uploads/')) return `${BASE}${path}`;
+  return path;
+}
 
 function authHeaders() {
   const token = localStorage.getItem('cc_token');
-  const headers = { 'Bypass-Tunnel-Reminder': 'true' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function handle(res) {

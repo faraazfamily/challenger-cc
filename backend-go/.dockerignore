@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+uploads
+tmp
+*.exe
+.vercel
+.git
