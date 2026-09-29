@@ -39,7 +39,7 @@ func (s *Server) GetMatches(c *gin.Context) {
 	c.JSON(http.StatusOK, matches)
 }
 
-// GET /api/matches/:id — includes its batting/bowling scorecard rows
+// GET /api/matches/:id — includes its batting/bowling scorecard rows.
 func (s *Server) GetMatch(c *gin.Context) {
 	id := c.Param("id")
 
