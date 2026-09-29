@@ -94,6 +94,13 @@ export default function AdminPlayers() {
     setPreview(URL.createObjectURL(file));
   }
 
+  function removePhoto() {
+    setPhoto(null);
+    setPreview('');
+    setForm((f) => ({ ...f, existing_photo_url: '' }));
+    if (photoInput.current) photoInput.current.value = '';
+  }
+
   function closeModal() {
     setOpen(false);
     setEditingId(null);
@@ -233,7 +240,10 @@ export default function AdminPlayers() {
                 </div>
                 <div>
                   <button className="btn btn-secondary btn-sm" type="button" onClick={() => photoInput.current?.click()}>Choose photo</button>
-                  <p>{photo ? photo.name : 'Optional. JPG or PNG.'}</p>
+                  {preview && (
+                    <button className="btn btn-secondary btn-sm" type="button" onClick={removePhoto}>Remove photo</button>
+                  )}
+                  <p>{photo ? photo.name : 'Optional. Any common photo format.'}</p>
                   <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => choosePhoto(e.target.files?.[0])} />
                 </div>
               </div>

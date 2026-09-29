@@ -146,18 +146,19 @@ func (s *Server) attachCareer(player gin.H, id interface{}) error {
 }
 
 // saveUploadedPhoto stores a multipart "photo" field in the database, if present.
-// Returns ("", false) when no file was uploaded (not an error — photo is optional).
-func saveUploadedPhoto(c *gin.Context, s *Server, field string) (string, bool) {
+// Returns ("", false, nil) when no file was uploaded (not an error — photo is optional).
+// Returns an error when a file WAS uploaded but couldn't be saved, so the caller
+// can show the admin why it failed instead of silently dropping the photo.
+func saveUploadedPhoto(c *gin.Context, s *Server, field string) (string, bool, error) {
 	file, err := c.FormFile(field)
 	if err != nil {
-		return "", false
+		return "", false, nil
 	}
 	url, err := s.storeImage(file)
 	if err != nil {
-		_ = c.Error(err) // shows up in the server log
-		return "", false
+		return "", false, err
 	}
-	return url, true
+	return url, true, nil
 }
 
 // otherLeader reports who already holds captain or vice-captain, excluding the player being edited.
@@ -246,7 +247,11 @@ func (s *Server) CreatePlayer(c *gin.Context) {
 		return
 	}
 
-	photoURL, _ := saveUploadedPhoto(c, s, "photo")
+	photoURL, _, photoErr := saveUploadedPhoto(c, s, "photo")
+	if photoErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": photoErr.Error()})
+		return
+	}
 
 	var joinedParam interface{}
 	if v := c.PostForm("joined_date"); v != "" {
@@ -306,7 +311,10 @@ func (s *Server) UpdatePlayer(c *gin.Context) {
 
 	// Keep the existing photo unless a new one was uploaded this request.
 	photoURL := c.PostForm("existing_photo_url")
-	if uploaded, ok := saveUploadedPhoto(c, s, "photo"); ok {
+	if uploaded, ok, photoErr := saveUploadedPhoto(c, s, "photo"); photoErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": photoErr.Error()})
+		return
+	} else if ok {
 		photoURL = uploaded
 	}
 
