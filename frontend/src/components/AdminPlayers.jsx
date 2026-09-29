@@ -244,7 +244,7 @@ export default function AdminPlayers() {
                     <button className="btn btn-secondary btn-sm" type="button" onClick={removePhoto}>Remove photo</button>
                   )}
                   <p>{photo ? photo.name : 'Optional. Any common photo format.'}</p>
-                  <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => choosePhoto(e.target.files?.[0])} />
+                  <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => choosePhoto(e.target.files?.[0])} />
                 </div>
               </div>
               {error && <div className="error-text">{error}</div>}

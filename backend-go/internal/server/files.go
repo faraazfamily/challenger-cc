@@ -36,7 +36,18 @@ func (s *Server) storeFile(ext, contentType string, data []byte) (string, error)
 	return "/uploads/" + name, nil
 }
 
-// storeImage validates that the multipart file really is an image and saves it.
+// imageExtTypes lets us recognize photo formats that Go's built-in sniffer
+// (http.DetectContentType) doesn't know, like the HEIC/HEIF photos an iPhone
+// saves by default.
+var imageExtTypes = map[string]string{
+	".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+	".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
+	".heic": "image/heic", ".heif": "image/heif",
+	".tif": "image/tiff", ".tiff": "image/tiff",
+}
+
+// storeImage validates that the multipart file really is a photo and saves it.
+// It accepts any common photo format up to maxImageBytes.
 func (s *Server) storeImage(fh *multipart.FileHeader) (string, error) {
 	if fh.Size > maxImageBytes {
 		return "", fmt.Errorf("image is too large (max %d MB)", maxImageBytes>>20)
@@ -54,9 +65,19 @@ func (s *Server) storeImage(fh *multipart.FileHeader) (string, error) {
 	if len(data) > maxImageBytes {
 		return "", fmt.Errorf("image is too large (max %d MB)", maxImageBytes>>20)
 	}
+
 	contentType := http.DetectContentType(data)
 	if !strings.HasPrefix(contentType, "image/") {
-		return "", errors.New("file is not an image")
+		// Sniffing only recognizes a handful of formats — fall back to the
+		// file extension, then to whatever the browser reported.
+		ext := strings.ToLower(filepath.Ext(fh.Filename))
+		if guessed, ok := imageExtTypes[ext]; ok {
+			contentType = guessed
+		} else if browserType := fh.Header.Get("Content-Type"); strings.HasPrefix(browserType, "image/") {
+			contentType = browserType
+		} else {
+			return "", errors.New("that file doesn't look like a photo")
+		}
 	}
 	return s.storeFile(filepath.Ext(fh.Filename), contentType, data)
 }
