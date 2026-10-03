@@ -133,3 +133,6 @@ CREATE TABLE IF NOT EXISTS live_matches (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Switch a match in/out of player stats, leaderboard and team record without deleting it.
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS in_records BOOLEAN NOT NULL DEFAULT TRUE;

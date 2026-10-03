@@ -52,6 +52,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(null);
   const [error, setError] = useState('');
+  const [inRecords, setInRecords] = useState(true);
   const [wk, setWk] = useState(null);
   const [more, setMore] = useState({ view: 'menu', pen: 5, rt: '', ro: '', note: '' });
   const first = useRef(true);
@@ -106,7 +107,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
   const closeModal = () => { setModal(null); setError(''); };
 
   async function finish() {
-    const payload = E.buildFinishPayload(match);
+    const payload = { ...E.buildFinishPayload(match), in_records: inRecords };
     if (payload.batting.length + payload.bowling.length === 0
       && !confirm('None of the players in this match are linked to your squad, so no player stats will be saved. Save the match anyway?')) return;
     setBusy(true); setError('');
@@ -253,6 +254,11 @@ export default function ScorerLive({ initial, serverId, onExit }) {
           {!saved && (
             <>
               <p>Saving adds this match to Matches and updates every player's career stats, the leaderboard and the scorecard PDF.</p>
+              <label className="sc-check">
+                <input type="checkbox" checked={inRecords} onChange={(e) => setInRecords(e.target.checked)} />
+                Count this match in player stats and club record
+              </label>
+              {!inRecords && <p className="sc-small">It will be saved as a match but will not change any player's stats. You can switch it on later from Admin &gt; Matches.</p>}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? 'Saving...' : 'Save match & update player stats'}</button>
                 <button className="btn btn-secondary" onClick={downloadPdf}>Download PDF</button>

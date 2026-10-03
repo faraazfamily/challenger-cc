@@ -31,7 +31,10 @@ export default function Matches() {
                   <td><Link to={`/matches/${m.id}`}>{m.opponent}</Link></td>
                   <td>{m.tournament_name || '-'}</td>
                   <td>{m.our_score || '-'} {m.opponent_score ? `vs ${m.opponent_score}` : ''}</td>
-                  <td><span className={badgeClass(m.result)}>{m.result}</span></td>
+                  <td>
+                    <span className={badgeClass(m.result)}>{m.result}</span>
+                    {m.in_records === false && <span className="badge badge-upcoming" style={{ marginLeft: 6 }}>Not counted</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
