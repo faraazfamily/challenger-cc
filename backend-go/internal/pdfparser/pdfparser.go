@@ -26,11 +26,11 @@ type BowlingRow struct {
 }
 
 type Fixture struct {
-	SideA    string
-	SideB    string
-	ScoreA   string
-	ScoreB   string
-	Winner   string
+	SideA  string
+	SideB  string
+	ScoreA string
+	ScoreB string
+	Winner string
 }
 
 type ParseResult struct {
@@ -41,7 +41,7 @@ type ParseResult struct {
 }
 
 var versusRe = regexp.MustCompile(`([A-Za-z][A-Za-z]*)\s+v/s\s+([A-Za-z][A-Za-z]*)`)
-var teamScoreRe = regexp.MustCompile(`([A-Za-z]+)(\d+-\d+)\s*\(([^)]+)\)`)
+var teamScoreRe = regexp.MustCompile(`([A-Za-z]+)\s*(\d+-\d+)\s*\(([^)]+)\)`)
 var chaseWinRe = regexp.MustCompile(`([A-Za-z][A-Za-z]*)\s+need\s+0\s+runs`)
 
 // Bowling first: "Name 4.0 0 28 2" or "Name 4 0 28 2 7.00"
@@ -78,7 +78,10 @@ func Parse(fileBytes []byte, size int64) (*ParseResult, error) {
 	}
 
 	rawText := buf.String()
-	battingRows, bowlingRows := parseGlued(rawText)
+	battingRows, bowlingRows := parseLineFormat(rawText)
+	if len(battingRows) == 0 && len(bowlingRows) == 0 {
+		battingRows, bowlingRows = parseGlued(rawText)
+	}
 	if len(battingRows) == 0 && len(bowlingRows) == 0 {
 		battingRows, bowlingRows = parseSpacedLines(rawText)
 	}
@@ -154,6 +157,71 @@ func OurSide(fix Fixture, squad []string) (ours, opponent string, ok bool) {
 		return fix.SideB, fix.SideA, fix.SideA != "" && fix.SideB != ""
 	}
 	return "", "", false
+}
+
+// This club's scorer prints each batsman's row across three lines — name,
+// then how they were dismissed, then "R B 4s 6s SR" — and each bowler on
+// a single line ("Name O M R W ER"). Reading that layout directly is far
+// more reliable for this app's PDFs than guessing at glued/spaced text.
+var battingStatLine = regexp.MustCompile(`^(\d{1,3})\s+(\d{1,3})\s+(\d{1,2})\s+(\d{1,2})\s+\d+\.\d{1,2}$`)
+var bowlingStatLine = regexp.MustCompile(`(?i)^([A-Za-z][A-Za-z .'\-]{1,40}?)\s+(\d{1,2}\.\d)\s+(\d{1,2})\s+(\d{1,3})\s+(\d{1,2})\s+\d+\.\d{1,2}$`)
+
+func parseLineFormat(rawText string) ([]BattingRow, []BowlingRow) {
+	var lines []string
+	for _, raw := range strings.Split(rawText, "\n") {
+		line := strings.Join(strings.Fields(raw), " ")
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	var battingRows []BattingRow
+	var bowlingRows []BowlingRow
+	inBatting, inBowling := false, false
+	pendingName := ""
+
+	for _, line := range lines {
+		switch {
+		case strings.Contains(line, "Batsman") && strings.HasSuffix(line, "SR"):
+			inBatting, inBowling, pendingName = true, false, ""
+			continue
+		case strings.Contains(line, "Bowler") && strings.HasSuffix(line, "ER"):
+			inBatting, inBowling = false, true
+			continue
+		case strings.HasPrefix(line, "Extras"), strings.HasPrefix(line, "Fall of wickets"), strings.HasPrefix(line, "Powered by"):
+			inBatting, inBowling = false, false
+			continue
+		}
+
+		if inBatting {
+			if m := battingStatLine.FindStringSubmatch(line); m != nil {
+				if pendingName != "" {
+					runs, _ := strconv.Atoi(m[1])
+					balls, _ := strconv.Atoi(m[2])
+					fours, _ := strconv.Atoi(m[3])
+					sixes, _ := strconv.Atoi(m[4])
+					battingRows = append(battingRows, BattingRow{Name: pendingName, Runs: runs, BallsFaced: balls, Fours: fours, Sixes: sixes})
+				}
+				pendingName = ""
+			} else if pendingName == "" {
+				// First line after a reset is the player's name; the next
+				// line (the dismissal text) is intentionally skipped.
+				pendingName = cleanName(line)
+			}
+			continue
+		}
+
+		if inBowling {
+			if m := bowlingStatLine.FindStringSubmatch(line); m != nil {
+				overs, _ := strconv.ParseFloat(m[2], 64)
+				maidens, _ := strconv.Atoi(m[3])
+				conceded, _ := strconv.Atoi(m[4])
+				wickets, _ := strconv.Atoi(m[5])
+				bowlingRows = append(bowlingRows, BowlingRow{Name: cleanName(m[1]), Overs: overs, Maidens: maidens, RunsConceded: conceded, Wickets: wickets})
+			}
+		}
+	}
+	return battingRows, bowlingRows
 }
 
 func parseSpacedLines(rawText string) ([]BattingRow, []BowlingRow) {
@@ -237,7 +305,7 @@ func sections(s, start string, ends []string) []string {
 	return out
 }
 
-var batRowRe = regexp.MustCompile(`([A-Z][A-Za-z]+?)(not out|c [A-Z][A-Za-z]+ b [A-Z][A-Za-z]+|lbw b [A-Z][A-Za-z]+|run out|st [A-Z][A-Za-z]+ b [A-Z][A-Za-z]+|b [A-Z][A-Za-z]+)`)
+var batRowRe = regexp.MustCompile(`([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)?)\s*(not out|retired(?: hurt)?|absent|hit wicket|c\s?&\s?b\s+[A-Z][A-Za-z]+|c\s+[A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)?\s+b\s+[A-Z][A-Za-z]+|lbw\s+b\s+[A-Z][A-Za-z]+|run\s*out|st\s+[A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)?\s+b\s+[A-Z][A-Za-z]+|b\s+[A-Z][A-Za-z]+)`)
 
 func parseBattingChunk(chunk string) []BattingRow {
 	locs := batRowRe.FindAllStringSubmatchIndex(chunk, -1)
@@ -258,7 +326,7 @@ func parseBattingChunk(chunk string) []BattingRow {
 	return rows
 }
 
-var bowlStartRe = regexp.MustCompile(`([A-Z][A-Za-z]+?)(\d{1,2}\.\d)`)
+var bowlStartRe = regexp.MustCompile(`([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)?)\s*(\d{1,2}\.\d)`)
 var srRe = regexp.MustCompile(`\d+\.\d{2}`)
 
 func parseBowlingChunk(chunk string) []BowlingRow {
@@ -380,7 +448,7 @@ func splitBatting(digits string, sr float64) (runs, balls, fours, sixes int, ok 
 				if balls == 0 || balls > 300 || runs > 400 {
 					continue
 				}
-				if abs(float64(runs)/float64(balls)*100 - sr) < 0.75 {
+				if abs(float64(runs)/float64(balls)*100-sr) < 0.75 {
 					return runs, balls, fours, sixes, true
 				}
 			}

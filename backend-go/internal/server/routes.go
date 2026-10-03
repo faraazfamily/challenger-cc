@@ -16,6 +16,16 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	// database, so pinging it never wakes (or bills) the serverless Postgres.
 	r.GET("/api/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
+	// A second check that DOES touch the database, so an uptime monitor can
+	// keep Neon's free database from auto-suspending too.
+	r.GET("/api/health/db", func(c *gin.Context) {
+		if err := s.DB.Ping(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "db unreachable"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	// Uploaded photos / PDFs (stored in Postgres, see files.go)
 	r.GET("/uploads/:name", s.ServeUpload)
 
