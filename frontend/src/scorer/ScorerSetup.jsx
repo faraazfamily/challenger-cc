@@ -5,7 +5,7 @@ import { FORMATS, defaultConfig, createMatch, newPid } from './engine';
 const today = () => new Date().toISOString().slice(0, 10);
 const blankTeam = () => ({ name: '', players: [] });
 
-function TeamPicker({ label, team, setTeam, squad, takenIds }) {
+function TeamPicker({ label, team, setTeam, squad, takenIds, isOurs, onMakeOurs }) {
   const [guest, setGuest] = useState('');
   const free = squad.filter((p) => !takenIds.has(p.id));
 
@@ -31,7 +31,8 @@ function TeamPicker({ label, team, setTeam, squad, takenIds }) {
 
   return (
     <div className="card sc-panel">
-      <h3>{label}</h3>
+      <h3>{label} {isOurs && <span className="badge badge-won" style={{ marginLeft: 8 }}>My team</span>}</h3>
+      {!isOurs && <button type="button" className="btn btn-secondary btn-sm" style={{ marginBottom: 10 }} onClick={onMakeOurs}>Make this my team</button>}
       <div className="form-group">
         <label>Team name</label>
         <input value={team.name} onChange={(e) => setTeam({ ...team, name: e.target.value })} placeholder="e.g. Asad" />
@@ -63,7 +64,7 @@ function TeamPicker({ label, team, setTeam, squad, takenIds }) {
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addGuest(); } }} />
         <button type="button" className="btn btn-secondary" onClick={addGuest}>Add</button>
       </div>
-      <div className="sc-small">Only squad players get career stats. Guests appear on the scorecard only.</div>
+      <div className="sc-small">{isOurs ? "This is YOUR team: squad players here get career stats after the match." : "Opponent team: players here appear on the scorecard only, no career stats."}</div>
     </div>
   );
 }
@@ -102,6 +103,7 @@ export default function ScorerSetup({ onStart, onCancel }) {
     if (!names[0] || !names[1]) return setError('Give both teams a name.');
     if (names[0].toLowerCase() === names[1].toLowerCase()) return setError('The two teams need different names.');
     if (teams.some((t) => t.players.length < 2)) return setError('Each team needs at least 2 players.');
+    if (!teams[Number(ourSide)].players.some((p) => p.playerId)) return setError('Your team (' + names[Number(ourSide)] + ') has no squad player, so no career stats would be saved. Add at least one squad player to your team, or switch "My team".');
     if (format !== 'Test' && !(cfg.overs > 0)) return setError('Enter the number of overs per innings.');
     const match = createMatch({
       config: { ...cfg, format },
@@ -176,8 +178,8 @@ export default function ScorerSetup({ onStart, onCancel }) {
       </div>
 
       <div className="sc-two">
-        <TeamPicker label="Team A" team={teams[0]} setTeam={setTeam(0)} squad={squad} takenIds={takenIds} />
-        <TeamPicker label="Team B" team={teams[1]} setTeam={setTeam(1)} squad={squad} takenIds={takenIds} />
+        <TeamPicker label="Team A" team={teams[0]} setTeam={setTeam(0)} squad={squad} takenIds={takenIds} isOurs={Number(ourSide) === 0} onMakeOurs={() => setOurSide(0)} />
+        <TeamPicker label="Team B" team={teams[1]} setTeam={setTeam(1)} squad={squad} takenIds={takenIds} isOurs={Number(ourSide) === 1} onMakeOurs={() => setOurSide(1)} />
       </div>
 
       <div className="card sc-panel">
@@ -197,13 +199,6 @@ export default function ScorerSetup({ onStart, onCancel }) {
               <option value="bowl">Bowl first</option>
             </select>
           </div>
-          <div className="form-group">
-            <label>Our side (for the club record)</label>
-            <select value={ourSide} onChange={(e) => setOurSide(e.target.value)}>
-              <option value={0}>{teams[0].name || 'Team A'}</option>
-              <option value={1}>{teams[1].name || 'Team B'}</option>
-            </select>
-          </div>
         </div>
         <div className="form-row">
           <div className="form-group"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
@@ -218,6 +213,7 @@ export default function ScorerSetup({ onStart, onCancel }) {
         </div>
       </div>
 
+      <div className="review-note" style={{ marginBottom: 12 }}>My team: <strong>{teams[Number(ourSide)].name || (Number(ourSide) === 0 ? 'Team A' : 'Team B')}</strong>. After the match, win/loss and career stats are saved for this team only.</div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10 }}>
         <button className="btn btn-primary" type="submit">Start scoring</button>

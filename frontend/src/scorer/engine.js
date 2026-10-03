@@ -451,30 +451,36 @@ export function scoreString(m, team) {
   return (m.config.inningsPerSide || 1) === 1 ? `${parts[0]} (${lastOvers})` : parts.join(' & ');
 }
 
+// Career stats are saved ONLY for the players of "our" team (meta.ourSide).
+// Opponent-side players (even if they exist in the squad list) are scorecard-only.
 export function extractStats(m) {
   const batting = [];
   const bowling = [];
   const bpo = m.config.ballsPerOver || 6;
+  const our = m.meta.ourSide || 0;
   m.innings.forEach((inn, i) => {
     const s = summarize(m, i);
     const bt = m.teams[inn.team].players;
     const fl = m.teams[1 - inn.team].players;
-    s.batters.forEach((b) => {
-      const pl = bt.find((p) => p.pid === b.pid);
-      if (!pl?.playerId) return;
-      batting.push({
-        player_id: pl.playerId, innings_no: i + 1, runs: b.runs, balls_faced: b.balls, fours: b.fours, sixes: b.sixes,
-        is_out: b.status === 'out', dismissal_type: b.status === 'out' ? b.how : b.status === 'retired' ? 'retired hurt' : 'Not Out',
+    if (inn.team === our) {
+      s.batters.forEach((b) => {
+        const pl = bt.find((p) => p.pid === b.pid);
+        if (!pl?.playerId) return;
+        batting.push({
+          player_id: pl.playerId, innings_no: i + 1, runs: b.runs, balls_faced: b.balls, fours: b.fours, sixes: b.sixes,
+          is_out: b.status === 'out', dismissal_type: b.status === 'out' ? b.how : b.status === 'retired' ? 'retired hurt' : 'Not Out',
+        });
       });
-    });
-    s.bowlers.forEach((b) => {
-      const pl = fl.find((p) => p.pid === b.pid);
-      if (!pl?.playerId) return;
-      bowling.push({
-        player_id: pl.playerId, innings_no: i + 1, overs: oversToDecimal(b.legal, bpo),
-        maidens: b.maidens, runs_conceded: b.runs, wickets: b.wk,
+    } else {
+      s.bowlers.forEach((b) => {
+        const pl = fl.find((p) => p.pid === b.pid);
+        if (!pl?.playerId) return;
+        bowling.push({
+          player_id: pl.playerId, innings_no: i + 1, overs: oversToDecimal(b.legal, bpo),
+          maidens: b.maidens, runs_conceded: b.runs, wickets: b.wk,
+        });
       });
-    });
+    }
   });
   return { batting, bowling };
 }

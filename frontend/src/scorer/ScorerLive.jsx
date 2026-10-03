@@ -253,7 +253,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
           <h3>{step.result.text}</h3>
           {!saved && (
             <>
-              <p>Saving adds this match to Matches and updates every player's career stats, the leaderboard and the scorecard PDF.</p>
+              <p>Saving adds this match to Matches and updates the career stats of <strong>{match.teams[match.meta.ourSide || 0].name}</strong> (your team) players, the leaderboard and the scorecard PDF. Opponent players are not added to career stats.</p>
               <label className="sc-check">
                 <input type="checkbox" checked={inRecords} onChange={(e) => setInRecords(e.target.checked)} />
                 Count this match in player stats and club record
