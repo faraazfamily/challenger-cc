@@ -94,7 +94,8 @@ func (s *Server) attachCareer(player gin.H, id interface{}) error {
 	err := s.DB.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(runs),0), COALESCE(SUM(balls_faced),0), COALESCE(MAX(runs),0),
 		       COUNT(*) FILTER (WHERE is_out = true), COALESCE(SUM(fours),0), COALESCE(SUM(sixes),0)
-		FROM batting_stats WHERE player_id = $1`, id,
+		FROM batting_stats WHERE player_id = $1
+		  AND match_id IN (SELECT id FROM matches WHERE in_records)`, id,
 	).Scan(&innings, &totalRuns, &totalBalls, &highestScore, &timesOut, &totalFours, &totalSixes)
 	if err != nil {
 		return err
@@ -116,7 +117,8 @@ func (s *Server) attachCareer(player gin.H, id interface{}) error {
 	err = s.DB.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(overs),0), COALESCE(SUM(runs_conceded),0),
 		       COALESCE(SUM(wickets),0), COALESCE(SUM(maidens),0)
-		FROM bowling_stats WHERE player_id = $1`, id,
+		FROM bowling_stats WHERE player_id = $1
+		  AND match_id IN (SELECT id FROM matches WHERE in_records)`, id,
 	).Scan(&inningsBowled, &totalOvers, &totalRunsConceded, &totalWickets, &totalMaidens)
 	if err != nil {
 		return err

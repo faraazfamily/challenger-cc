@@ -51,6 +51,7 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	r.POST("/api/matches", auth, s.CreateMatch)
 	r.PUT("/api/matches/:id", auth, s.UpdateMatch)
 	r.DELETE("/api/matches/:id", auth, s.DeleteMatch)
+	r.PUT("/api/matches/:id/in-records", auth, s.SetMatchInRecords)
 	r.PUT("/api/matches/:id/stats", auth, s.SaveMatchStats)
 
 	r.POST("/api/scorecards/upload", auth, s.ImportScorecard)

@@ -138,6 +138,7 @@ type finishPayload struct {
 	OpponentScore string       `json:"opponent_score"`
 	Result        string       `json:"result"`
 	ResultNote    string       `json:"result_note"`
+	InRecords     *bool        `json:"in_records"`
 	TournamentID  *int         `json:"tournament_id"`
 	Batting       []finishBat  `json:"batting"`
 	Bowling       []finishBowl `json:"bowling"`
@@ -158,6 +159,8 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 	default:
 		p.Result = "No Result"
 	}
+
+	inRecords := p.InRecords == nil || *p.InRecords
 
 	var pdfBytes []byte
 	if fh, err := c.FormFile("pdf"); err == nil {
@@ -200,9 +203,9 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 
 	var matchID int
 	err = tx.QueryRow(
-		`INSERT INTO matches (tournament_id, opponent, match_date, venue, our_score, opponent_score, result, result_note)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-		p.TournamentID, p.Opponent, p.MatchDate, nullify(p.Venue), nullify(p.OurScore), nullify(p.OpponentScore), p.Result, nullify(p.ResultNote),
+		`INSERT INTO matches (tournament_id, opponent, match_date, venue, our_score, opponent_score, result, result_note, in_records)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+		p.TournamentID, p.Opponent, p.MatchDate, nullify(p.Venue), nullify(p.OurScore), nullify(p.OpponentScore), p.Result, nullify(p.ResultNote), inRecords,
 	).Scan(&matchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create the match"})
@@ -260,4 +263,28 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"match_id": matchID, "pdf_url": pdfURL})
+}
+
+// PUT /api/matches/:id/in-records
+// Switches a saved match in or out of the club records. Nothing is deleted: the match and its
+// scorecard stay, but while it is switched off every stat query (player career, leaderboard,
+// compare, team record) ignores it. Switch it back on and everything returns.
+func (s *Server) SetMatchInRecords(c *gin.Context) {
+	var req struct {
+		InRecords bool `json:"in_records"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "in_records (true/false) is required"})
+		return
+	}
+	res, err := s.DB.Exec(`UPDATE matches SET in_records = $1 WHERE id = $2`, req.InRecords, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the match"})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Match not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "in_records": req.InRecords})
 }

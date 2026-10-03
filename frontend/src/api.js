@@ -49,6 +49,13 @@ export const api = {
   deletePlayer: (id) =>
     fetch(`${BASE}/api/players/${id}`, { method: 'DELETE', headers: { ...authHeaders() } }).then(handle),
 
+  setMatchInRecords: (id, inRecords) =>
+    fetch(`${BASE}/api/matches/${id}/in-records`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ in_records: inRecords }),
+    }).then(handle),
+
   // Live scorer (admin)
   scorerList: () => fetch(`${BASE}/api/scorer/live`, { headers: authHeaders() }).then(handle),
   scorerGet: (id) => fetch(`${BASE}/api/scorer/live/${id}`, { headers: authHeaders() }).then(handle),

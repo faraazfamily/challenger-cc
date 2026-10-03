@@ -13,6 +13,7 @@ func (s *Server) GetLeaderboard(c *gin.Context) {
 	rows, err := s.DB.Query(`
 		SELECT p.id, p.name, p.photo_url, SUM(bs.runs) AS runs, COUNT(*) AS innings
 		FROM batting_stats bs JOIN players p ON bs.player_id = p.id
+		WHERE bs.match_id IN (SELECT id FROM matches WHERE in_records)
 		GROUP BY p.id, p.name, p.photo_url ORDER BY runs DESC LIMIT 10`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build leaderboard"})
@@ -33,6 +34,7 @@ func (s *Server) GetLeaderboard(c *gin.Context) {
 	rows, err = s.DB.Query(`
 		SELECT p.id, p.name, p.photo_url, SUM(bw.wickets) AS wickets, COUNT(*) AS innings
 		FROM bowling_stats bw JOIN players p ON bw.player_id = p.id
+		WHERE bw.match_id IN (SELECT id FROM matches WHERE in_records)
 		GROUP BY p.id, p.name, p.photo_url ORDER BY wickets DESC LIMIT 10`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build leaderboard"})
@@ -55,6 +57,7 @@ func (s *Server) GetLeaderboard(c *gin.Context) {
 		       SUM(bs.runs) AS runs, SUM(bs.balls_faced) AS balls,
 		       ROUND((SUM(bs.runs)::NUMERIC / NULLIF(SUM(bs.balls_faced),0)) * 100, 2) AS strike_rate
 		FROM batting_stats bs JOIN players p ON bs.player_id = p.id
+		WHERE bs.match_id IN (SELECT id FROM matches WHERE in_records)
 		GROUP BY p.id, p.name, p.photo_url HAVING SUM(bs.balls_faced) > 0
 		ORDER BY strike_rate DESC NULLS LAST LIMIT 10`)
 	if err != nil {
@@ -82,6 +85,7 @@ func (s *Server) GetLeaderboard(c *gin.Context) {
 		       SUM(bw.runs_conceded) AS runs_conceded, SUM(bw.overs) AS overs,
 		       ROUND((SUM(bw.runs_conceded)::NUMERIC / NULLIF(SUM(bw.overs),0)), 2) AS economy
 		FROM bowling_stats bw JOIN players p ON bw.player_id = p.id
+		WHERE bw.match_id IN (SELECT id FROM matches WHERE in_records)
 		GROUP BY p.id, p.name, p.photo_url HAVING SUM(bw.overs) > 0
 		ORDER BY economy ASC NULLS LAST LIMIT 10`)
 	if err != nil {
@@ -111,7 +115,7 @@ func (s *Server) GetLeaderboard(c *gin.Context) {
 
 // GET /api/stats/team-record
 func (s *Server) GetTeamRecord(c *gin.Context) {
-	rows, err := s.DB.Query(`SELECT result, COUNT(*) AS count FROM matches WHERE result != 'Upcoming' GROUP BY result`)
+	rows, err := s.DB.Query(`SELECT result, COUNT(*) AS count FROM matches WHERE result != 'Upcoming' AND in_records GROUP BY result`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch team record"})
 		return

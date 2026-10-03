@@ -401,6 +401,7 @@ export function matchResult(m) {
 
 // What should the scorer do next?
 export function nextStep(m) {
+  if (m.resultOverride) return { kind: 'done', result: { done: true, ...m.resultOverride } };
   const last = m.innings.length - 1;
   const s = summarize(m, last);
   if (!s.complete) return { kind: 'play' };

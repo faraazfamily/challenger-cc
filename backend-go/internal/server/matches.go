@@ -10,7 +10,7 @@ import (
 // GET /api/matches
 func (s *Server) GetMatches(c *gin.Context) {
 	rows, err := s.DB.Query(`
-		SELECT m.id, m.tournament_id, m.opponent, m.match_date, m.venue, m.our_score, m.opponent_score, m.result, t.name
+		SELECT m.id, m.tournament_id, m.opponent, m.match_date, m.venue, m.our_score, m.opponent_score, m.result, t.name, m.in_records
 		FROM matches m LEFT JOIN tournaments t ON m.tournament_id = t.id
 		ORDER BY m.match_date DESC`)
 	if err != nil {
@@ -24,16 +24,17 @@ func (s *Server) GetMatches(c *gin.Context) {
 		var id int
 		var tournamentID sql.NullInt32
 		var opponent, result string
+		var inRecords bool
 		var matchDate sql.NullTime
 		var venue, ourScore, oppScore, tournamentName sql.NullString
-		if err := rows.Scan(&id, &tournamentID, &opponent, &matchDate, &venue, &ourScore, &oppScore, &result, &tournamentName); err != nil {
+		if err := rows.Scan(&id, &tournamentID, &opponent, &matchDate, &venue, &ourScore, &oppScore, &result, &tournamentName, &inRecords); err != nil {
 			continue
 		}
 		matches = append(matches, gin.H{
 			"id": id, "tournament_id": nullableInt(tournamentID), "opponent": opponent,
 			"match_date": nullableDate(matchDate), "venue": nullableString(venue),
 			"our_score": nullableString(ourScore), "opponent_score": nullableString(oppScore),
-			"result": result, "tournament_name": nullableString(tournamentName),
+			"result": result, "tournament_name": nullableString(tournamentName), "in_records": inRecords,
 		})
 	}
 	c.JSON(http.StatusOK, matches)
@@ -64,7 +65,8 @@ func (s *Server) GetMatch(c *gin.Context) {
 	}
 
 	var noteVal sql.NullString
-	_ = s.DB.QueryRow(`SELECT result_note FROM matches WHERE id = $1`, id).Scan(&noteVal)
+	inRecords := true
+	_ = s.DB.QueryRow(`SELECT result_note, in_records FROM matches WHERE id = $1`, id).Scan(&noteVal, &inRecords)
 
 	battingRows, err := s.DB.Query(`
 		SELECT bs.id, bs.player_id, p.name, bs.runs, bs.balls_faced, bs.fours, bs.sixes, bs.is_out, bs.dismissal_type, bs.innings_no
@@ -118,7 +120,7 @@ func (s *Server) GetMatch(c *gin.Context) {
 		"match_date": nullableDate(matchDate), "venue": nullableString(venue),
 		"our_score": nullableString(ourScore), "opponent_score": nullableString(oppScore),
 		"result": result, "tournament_name": nullableString(tournamentName),
-		"batting": batting, "bowling": bowling, "result_note": nullableString(noteVal),
+		"batting": batting, "bowling": bowling, "result_note": nullableString(noteVal), "in_records": inRecords,
 	})
 }
 

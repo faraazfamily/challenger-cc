@@ -16,6 +16,9 @@ export default function MatchDetail() {
   return (
     <div className="container section">
       <h2>vs {match.opponent}</h2>
+      {match.in_records === false && (
+        <div className="review-note">This match is not counted in player stats, the leaderboard or the team record.</div>
+      )}
       <p style={{ color: '#6b7280' }}>
         {new Date(match.match_date).toLocaleDateString()} · {match.venue || 'Venue TBD'} · {match.tournament_name || 'Friendly'}
       </p>
