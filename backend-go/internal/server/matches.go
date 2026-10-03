@@ -63,9 +63,12 @@ func (s *Server) GetMatch(c *gin.Context) {
 		return
 	}
 
+	var noteVal sql.NullString
+	_ = s.DB.QueryRow(`SELECT result_note FROM matches WHERE id = $1`, id).Scan(&noteVal)
+
 	battingRows, err := s.DB.Query(`
-		SELECT bs.id, bs.player_id, p.name, bs.runs, bs.balls_faced, bs.fours, bs.sixes, bs.is_out, bs.dismissal_type
-		FROM batting_stats bs JOIN players p ON bs.player_id = p.id WHERE bs.match_id = $1 ORDER BY bs.runs DESC`, id)
+		SELECT bs.id, bs.player_id, p.name, bs.runs, bs.balls_faced, bs.fours, bs.sixes, bs.is_out, bs.dismissal_type, bs.innings_no
+		FROM batting_stats bs JOIN players p ON bs.player_id = p.id WHERE bs.match_id = $1 ORDER BY bs.innings_no, bs.runs DESC`, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch batting stats"})
 		return
@@ -74,22 +77,22 @@ func (s *Server) GetMatch(c *gin.Context) {
 
 	batting := []gin.H{}
 	for battingRows.Next() {
-		var bid, playerID, runs, balls, fours, sixes int
+		var bid, playerID, runs, balls, fours, sixes, inningsNo int
 		var name string
 		var isOut bool
 		var dismissal sql.NullString
-		if err := battingRows.Scan(&bid, &playerID, &name, &runs, &balls, &fours, &sixes, &isOut, &dismissal); err != nil {
+		if err := battingRows.Scan(&bid, &playerID, &name, &runs, &balls, &fours, &sixes, &isOut, &dismissal, &inningsNo); err != nil {
 			continue
 		}
 		batting = append(batting, gin.H{
 			"id": bid, "player_id": playerID, "player_name": name, "runs": runs, "balls_faced": balls,
-			"fours": fours, "sixes": sixes, "is_out": isOut, "dismissal_type": nullableString(dismissal),
+			"fours": fours, "sixes": sixes, "is_out": isOut, "dismissal_type": nullableString(dismissal), "innings_no": inningsNo,
 		})
 	}
 
 	bowlingRows, err := s.DB.Query(`
-		SELECT bw.id, bw.player_id, p.name, bw.overs, bw.maidens, bw.runs_conceded, bw.wickets
-		FROM bowling_stats bw JOIN players p ON bw.player_id = p.id WHERE bw.match_id = $1 ORDER BY bw.wickets DESC`, id)
+		SELECT bw.id, bw.player_id, p.name, bw.overs, bw.maidens, bw.runs_conceded, bw.wickets, bw.innings_no
+		FROM bowling_stats bw JOIN players p ON bw.player_id = p.id WHERE bw.match_id = $1 ORDER BY bw.innings_no, bw.wickets DESC`, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch bowling stats"})
 		return
@@ -98,15 +101,15 @@ func (s *Server) GetMatch(c *gin.Context) {
 
 	bowling := []gin.H{}
 	for bowlingRows.Next() {
-		var bid, playerID, maidens, runsConceded, wickets int
+		var bid, playerID, maidens, runsConceded, wickets, inningsNo int
 		var overs float64
 		var name string
-		if err := bowlingRows.Scan(&bid, &playerID, &name, &overs, &maidens, &runsConceded, &wickets); err != nil {
+		if err := bowlingRows.Scan(&bid, &playerID, &name, &overs, &maidens, &runsConceded, &wickets, &inningsNo); err != nil {
 			continue
 		}
 		bowling = append(bowling, gin.H{
 			"id": bid, "player_id": playerID, "player_name": name, "overs": overs,
-			"maidens": maidens, "runs_conceded": runsConceded, "wickets": wickets,
+			"maidens": maidens, "runs_conceded": runsConceded, "wickets": wickets, "innings_no": inningsNo,
 		})
 	}
 
@@ -115,7 +118,7 @@ func (s *Server) GetMatch(c *gin.Context) {
 		"match_date": nullableDate(matchDate), "venue": nullableString(venue),
 		"our_score": nullableString(ourScore), "opponent_score": nullableString(oppScore),
 		"result": result, "tournament_name": nullableString(tournamentName),
-		"batting": batting, "bowling": bowling,
+		"batting": batting, "bowling": bowling, "result_note": nullableString(noteVal),
 	})
 }
 

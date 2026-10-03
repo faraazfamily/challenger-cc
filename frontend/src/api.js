@@ -49,6 +49,26 @@ export const api = {
   deletePlayer: (id) =>
     fetch(`${BASE}/api/players/${id}`, { method: 'DELETE', headers: { ...authHeaders() } }).then(handle),
 
+  // Live scorer (admin)
+  scorerList: () => fetch(`${BASE}/api/scorer/live`, { headers: authHeaders() }).then(handle),
+  scorerGet: (id) => fetch(`${BASE}/api/scorer/live/${id}`, { headers: authHeaders() }).then(handle),
+  scorerCreate: (payload) =>
+    fetch(`${BASE}/api/scorer/live`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  scorerSave: (id, payload) =>
+    fetch(`${BASE}/api/scorer/live/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    }).then(handle),
+  scorerDelete: (id) =>
+    fetch(`${BASE}/api/scorer/live/${id}`, { method: 'DELETE', headers: { ...authHeaders() } }).then(handle),
+  scorerFinish: (id, formData) =>
+    fetch(`${BASE}/api/scorer/live/${id}/finish`, { method: 'POST', headers: { ...authHeaders() }, body: formData }).then(handle),
+
   // Tournaments
   getTournaments: () => fetch(`${BASE}/api/tournaments`, { headers: authHeaders() }).then(handle),
   createTournament: (payload) =>

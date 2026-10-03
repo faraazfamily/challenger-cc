@@ -5,8 +5,9 @@ import AdminPlayers from '../components/AdminPlayers';
 import AdminMatches from '../components/AdminMatches';
 import AdminTournaments from '../components/AdminTournaments';
 import AdminScorecard from '../components/AdminScorecard';
+import AdminScorer from '../scorer/AdminScorer';
 
-const TABS = ['Players', 'Matches', 'Tournaments', 'Upload Scorecard'];
+const TABS = ['Players', 'Matches', 'Live Scorer', 'Tournaments', 'Upload Scorecard'];
 
 export default function Admin() {
   const [tab, setTab] = useState('Players');
@@ -35,6 +36,7 @@ export default function Admin() {
       {tab === 'Players' && <AdminPlayers />}
       {tab === 'Matches' && <AdminMatches />}
       {tab === 'Tournaments' && <AdminTournaments />}
+      {tab === 'Live Scorer' && <AdminScorer />}
       {tab === 'Upload Scorecard' && <AdminScorecard />}
     </div>
   );

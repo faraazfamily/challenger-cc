@@ -57,6 +57,14 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	r.POST("/api/scorecards/:matchId/upload", auth, s.UploadScorecard)
 	r.GET("/api/scorecards/:matchId", s.GetScorecards)
 
+	// Live scorer (admin only)
+	r.GET("/api/scorer/live", auth, s.ListLiveMatches)
+	r.POST("/api/scorer/live", auth, s.CreateLiveMatch)
+	r.GET("/api/scorer/live/:id", auth, s.GetLiveMatch)
+	r.PUT("/api/scorer/live/:id", auth, s.SaveLiveMatch)
+	r.DELETE("/api/scorer/live/:id", auth, s.DeleteLiveMatch)
+	r.POST("/api/scorer/live/:id/finish", auth, s.FinishLiveMatch)
+
 	r.GET("/api/stats/leaderboard", s.GetLeaderboard)
 	r.GET("/api/stats/team-record", s.GetTeamRecord)
 }

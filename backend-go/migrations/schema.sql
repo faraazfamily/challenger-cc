@@ -105,3 +105,31 @@ CREATE TABLE IF NOT EXISTS files (
     data BYTEA NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- ===== Live scorer (Cricket-Scorer section) =====
+-- A player can bat / bowl in more than one innings of the same match (Test = 2 innings each),
+-- so stats are now unique per (match, player, innings) instead of per (match, player).
+ALTER TABLE batting_stats ADD COLUMN IF NOT EXISTS innings_no INT NOT NULL DEFAULT 1;
+ALTER TABLE bowling_stats ADD COLUMN IF NOT EXISTS innings_no INT NOT NULL DEFAULT 1;
+ALTER TABLE batting_stats DROP CONSTRAINT IF EXISTS batting_stats_match_id_player_id_key;
+ALTER TABLE bowling_stats DROP CONSTRAINT IF EXISTS bowling_stats_match_id_player_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_batting_unique ON batting_stats(match_id, player_id, innings_no);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bowling_unique ON bowling_stats(match_id, player_id, innings_no);
+
+-- Test matches can be drawn; keep the human-readable result ("Asad won by 5 wickets").
+ALTER TABLE matches DROP CONSTRAINT IF EXISTS matches_result_check;
+ALTER TABLE matches ADD CONSTRAINT matches_result_check
+    CHECK (result IN ('Won','Lost','Tied','No Result','Upcoming','Draw'));
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS result_note TEXT;
+
+-- The match being scored right now (whole match as JSON, saved after every ball).
+CREATE TABLE IF NOT EXISTS live_matches (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT '',
+    format TEXT NOT NULL DEFAULT '',
+    state JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'live' CHECK (status IN ('live','finished')),
+    match_id INT REFERENCES matches(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
