@@ -59,9 +59,4 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 
 	r.GET("/api/stats/leaderboard", s.GetLeaderboard)
 	r.GET("/api/stats/team-record", s.GetTeamRecord)
-
-	r.GET("/api/live/matches", auth, s.GetLiveMatches)
-	r.POST("/api/live/matches", auth, s.CreateLiveMatch)
-	r.GET("/api/live/matches/:id", auth, s.GetLiveMatch)
-	r.PUT("/api/live/matches/:id/toss", auth, s.SetLiveMatchToss)
 }

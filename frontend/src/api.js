@@ -99,22 +99,6 @@ export const api = {
   // Stats
   getLeaderboard: () => fetch(`${BASE}/api/stats/leaderboard`, { headers: authHeaders() }).then(handle),
   getTeamRecord: () => fetch(`${BASE}/api/stats/team-record`, { headers: authHeaders() }).then(handle),
-
-  // Live Scorer
-  getLiveMatches: () => fetch(`${BASE}/api/live/matches`, { headers: authHeaders() }).then(handle),
-  getLiveMatch: (id) => fetch(`${BASE}/api/live/matches/${id}`, { headers: authHeaders() }).then(handle),
-  createLiveMatch: (payload) =>
-    fetch(`${BASE}/api/live/matches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(payload),
-    }).then(handle),
-  setLiveMatchToss: (id, payload) =>
-    fetch(`${BASE}/api/live/matches/${id}/toss`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(payload),
-    }).then(handle),
 };
 
 export function isLoggedIn() {
