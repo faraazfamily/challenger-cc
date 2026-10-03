@@ -10,6 +10,7 @@ import (
 
 	"challenger-cc-backend/internal/db"
 	"challenger-cc-backend/internal/server"
+	"challenger-cc-backend/migrations"
 )
 
 func main() {
@@ -23,6 +24,12 @@ func main() {
 	}
 	db.Connect(dsn)
 	defer db.Pool.Close()
+
+	// Self-heal: add any missing tables/columns (e.g. matches.in_records) so the
+	// leaderboard / matches pages never break because a migration was skipped.
+	if err := migrations.Apply(db.Pool); err != nil {
+		log.Fatalf("failed to apply schema: %v", err)
+	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
