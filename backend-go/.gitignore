@@ -4,3 +4,4 @@ uploads/*
 challenger-cc-backend
 
 .vercel
+backups/
