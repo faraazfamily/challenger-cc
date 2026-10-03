@@ -103,6 +103,10 @@ export default function ScorerLive({ initial, serverId, onExit }) {
     });
     setMode(null); setNbOff('bat'); setModal(null);
   }
+  function rename(team, pid, current) {
+    const n = prompt('Change player name', current);
+    if (n && n.trim()) commit(E.renamePlayer(match, team, pid, n));
+  }
   const openMore = () => { setMore({ view: 'menu', pen: 5, rt: sum.target ?? '', ro: sum.limit ?? '', note: '' }); setModal('more'); };
   const closeModal = () => { setModal(null); setError(''); };
 
@@ -184,11 +188,11 @@ export default function ScorerLive({ initial, serverId, onExit }) {
             <thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
             <tbody>
               {[striker, non].map((b, k) => (b ? (
-                <tr key={b.pid}><td><strong>{b.name}</strong>{k === 0 ? ' *' : ''}</td><td><strong>{b.runs}</strong></td><td>{b.balls}</td><td>{b.fours}</td><td>{b.sixes}</td><td>{b.sr.toFixed(0)}</td></tr>
+                <tr key={b.pid}><td><strong style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} title="Tap to change name" onClick={() => rename(sum.team, b.pid, b.name)}>{b.name}</strong>{k === 0 ? ' *' : ''}</td><td><strong>{b.runs}</strong></td><td>{b.balls}</td><td>{b.fours}</td><td>{b.sixes}</td><td>{b.sr.toFixed(0)}</td></tr>
               ) : null))}
             </tbody>
           </table>
-          {bw && <div className="sc-bowler"><strong>{bw.name}</strong> {bw.overs}-{bw.maidens}-{bw.runs}-{bw.wk}</div>}
+          {bw && <div className="sc-bowler"><strong style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} title="Tap to change name" onClick={() => rename(1 - sum.team, bw.pid, bw.name)}>{bw.name}</strong> {bw.overs}-{bw.maidens}-{bw.runs}-{bw.wk}</div>}
           <div className="sc-chips">
             {sum.currentChips.length === 0 && <span className="sc-small">New over</span>}
             {sum.currentChips.map((c, k) => <span key={k} className={`sc-chip sc-${c.t}`}>{c.label}</span>)}

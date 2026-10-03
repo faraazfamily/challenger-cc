@@ -10,12 +10,69 @@ function inningsLabel(match, i) {
   return `${match.teams[team].name}${two ? ` ${ord} inns` : ''}`;
 }
 
+function RunGraphs({ s }) {
+  const overs = s.completedOvers;
+  if (!overs.length) return null;
+  let tot = 0;
+  const cum = overs.map((o) => (tot += o.runs));
+  const W = 320;
+  const H = 130;
+  const L = 28;
+  const B = 20;
+  const T = 10;
+  const maxR = Math.max(...overs.map((o) => o.runs), 1);
+  const maxC = Math.max(...cum, 1);
+  const n = overs.length;
+  const bw = (W - L - 6) / n;
+  const x = (k) => L + k * bw + bw / 2;
+  const yR = (v) => H - B - (v / maxR) * (H - B - T);
+  const yC = (v) => H - B - (v / maxC) * (H - B - T);
+  const wk = s.fow.map((f) => Math.floor(parseFloat(f.over))).filter((k) => k >= 0 && k < n);
+  const wkCount = {};
+  wk.forEach((k) => { wkCount[k] = (wkCount[k] || 0) + 1; });
+  const step = n > 12 ? Math.ceil(n / 10) : 1;
+  const axis = (
+    <>
+      <line x1={L} y1={H - B} x2={W} y2={H - B} stroke="#9ca3af" />
+      <line x1={L} y1={T} x2={L} y2={H - B} stroke="#9ca3af" />
+    </>
+  );
+  const labels = overs.map((o, k) => ((k % step === 0 || k === n - 1) ? <text key={k} x={x(k)} y={H - 6} fontSize="9" textAnchor="middle" fill="#6b7280">{k + 1}</text> : null));
+  return (
+    <div className="card" style={{ marginTop: 16, padding: '12px 14px' }}>
+      <strong>Runs per over</strong>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 520 }} role="img" aria-label="Runs per over">
+        {axis}
+        <text x={L - 4} y={T + 4} fontSize="9" textAnchor="end" fill="#6b7280">{maxR}</text>
+        {overs.map((o, k) => (
+          <g key={k}>
+            <rect x={x(k) - bw * 0.35} y={yR(o.runs)} width={bw * 0.7} height={H - B - yR(o.runs)} fill="#1e3a5f" rx="1" />
+            {Array.from({ length: wkCount[k] || 0 }).map((_, w) => <circle key={w} cx={x(k)} cy={yR(o.runs) - 5 - w * 8} r="3" fill="#dc2626" />)}
+          </g>
+        ))}
+        {labels}
+      </svg>
+      <div className="sc-small" style={{ padding: 0 }}>Red dots are wickets in that over.</div>
+      <strong style={{ display: 'block', marginTop: 12 }}>Run progression (worm)</strong>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: 520 }} role="img" aria-label="Run progression">
+        {axis}
+        <text x={L - 4} y={T + 4} fontSize="9" textAnchor="end" fill="#6b7280">{maxC}</text>
+        <polyline fill="none" stroke="#1e3a5f" strokeWidth="2" points={[`${L},${H - B}`, ...cum.map((v, k) => `${x(k)},${yC(v)}`)].join(' ')} />
+        {wk.map((k, w) => <circle key={w} cx={x(k)} cy={yC(cum[k])} r="3.5" fill="#dc2626" />)}
+        {labels}
+      </svg>
+    </div>
+  );
+}
+
 export default function ScorecardView({ match }) {
   const count = match.innings.length;
   const [tab, setTab] = useState(count - 1);
   const i = Math.min(tab, count - 1);
   const s = summarize(match, i);
   const ex = s.extras;
+  const nameOf = (pid) => s.batters.find((b) => b.pid === pid)?.name || '?';
+  const parts = [...s.partnerships.filter((p) => p.runs > 0 || p.balls > 0), ...(s.partnership && !s.complete ? [{ ...s.partnership, aName: nameOf(s.partnership.a), bName: nameOf(s.partnership.b), open: true }] : [])];
 
   return (
     <div className="sc-card-view">
@@ -75,6 +132,20 @@ export default function ScorecardView({ match }) {
           </tbody>
         </table>
       </div>
+      {parts.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="sc-card-head"><strong>Partnerships</strong></div>
+          <table>
+            <thead><tr><th>Batters</th><th>Runs</th><th>Balls</th></tr></thead>
+            <tbody>
+              {parts.map((p, k) => (
+                <tr key={k}><td>{p.aName} &amp; {p.bName}{p.open ? ' *' : ''}</td><td><strong>{p.runs}</strong></td><td>{p.balls}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <RunGraphs s={s} />
     </div>
   );
 }

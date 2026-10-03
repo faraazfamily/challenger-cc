@@ -347,6 +347,14 @@ export function startNext(m, followOn = false) {
 export const reviseTarget = (m, target, overs) =>
   withLast(m, (inn) => ({ ...inn, revised: { target: Number(target) || null, overs: Number(overs) || null } }));
 
+// Change a player's display name while scoring (KDM-style "tap the name"). The squad link
+// (playerId) is kept, so career stats still go to the same squad member.
+export const renamePlayer = (m, team, pid, name) => {
+  const clean = String(name || '').trim();
+  if (!clean) return m;
+  return { ...m, teams: m.teams.map((t, k) => (k !== team ? t : { ...t, players: t.players.map((p) => (p.pid === pid ? { ...p, name: clean } : p)) })) };
+};
+
 export const setOverride = (m, resultOverride) => ({ ...m, resultOverride });
 
 // ---------- totals, lead, results ----------
