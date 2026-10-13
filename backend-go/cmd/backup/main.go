@@ -28,7 +28,7 @@ func main() {
 	db.Connect(dsn)
 	defer db.Pool.Close()
 
-	tables := []string{"team_info", "players", "tournaments", "matches", "scorecards", "batting_stats", "bowling_stats", "live_matches"}
+	tables := []string{"team_info", "players", "tournaments", "matches", "scorecards", "batting_stats", "bowling_stats"}
 
 	if err := os.MkdirAll("backups", 0o755); err != nil {
 		log.Fatalf("cannot create backups folder: %v", err)

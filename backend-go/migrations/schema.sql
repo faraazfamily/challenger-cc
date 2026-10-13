@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS files (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ===== Live scorer (Cricket-Scorer section) =====
+-- ===== Multi-innings stats, draws and result notes =====
 -- A player can bat / bowl in more than one innings of the same match (Test = 2 innings each),
 -- so stats are now unique per (match, player, innings) instead of per (match, player).
 ALTER TABLE batting_stats ADD COLUMN IF NOT EXISTS innings_no INT NOT NULL DEFAULT 1;
@@ -121,18 +121,6 @@ ALTER TABLE matches DROP CONSTRAINT IF EXISTS matches_result_check;
 ALTER TABLE matches ADD CONSTRAINT matches_result_check
     CHECK (result IN ('Won','Lost','Tied','No Result','Upcoming','Draw'));
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS result_note TEXT;
-
--- The match being scored right now (whole match as JSON, saved after every ball).
-CREATE TABLE IF NOT EXISTS live_matches (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL DEFAULT '',
-    format TEXT NOT NULL DEFAULT '',
-    state JSONB NOT NULL,
-    status TEXT NOT NULL DEFAULT 'live' CHECK (status IN ('live','finished')),
-    match_id INT REFERENCES matches(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
 
 -- Switch a match in/out of player stats, leaderboard and team record without deleting it.
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS in_records BOOLEAN NOT NULL DEFAULT TRUE;

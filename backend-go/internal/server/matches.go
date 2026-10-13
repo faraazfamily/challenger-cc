@@ -283,3 +283,27 @@ func (s *Server) SaveMatchStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
+
+// PUT /api/matches/:id/in-records
+// Switches a saved match in or out of the club records. Nothing is deleted: the match and its
+// scorecard stay, but while it is switched off every stat query (player career, leaderboard,
+// compare, team record) ignores it. Switch it back on and everything returns.
+func (s *Server) SetMatchInRecords(c *gin.Context) {
+	var req struct {
+		InRecords bool `json:"in_records"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "in_records (true/false) is required"})
+		return
+	}
+	res, err := s.DB.Exec(`UPDATE matches SET in_records = $1 WHERE id = $2`, req.InRecords, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the match"})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Match not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "in_records": req.InRecords})
+}
