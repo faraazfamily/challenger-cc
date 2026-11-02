@@ -171,6 +171,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
       const fd = new FormData();
       fd.append('payload', JSON.stringify(payload));
       fd.append('pdf', blob, 'scorecard.pdf');
+      fd.append('state', JSON.stringify(match));
       const r = await api.scorerFinish(serverId, fd);
       localStorage.removeItem(`cc_scorer_${serverId}`);
       setSaved({ ...r, count: payload.batting.length + payload.bowling.length });

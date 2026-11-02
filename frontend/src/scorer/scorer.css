@@ -172,6 +172,33 @@
 .sc-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .sc-legend .sc-small { margin: 0; font-weight: 400; }
 
+/* ---- Scorer home: History / Teams / Players (KDM-style) ---- */
+.sc-hometabs { border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.sc-hist-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.sc-hist-bar .sc-check { margin-top: 0; font-weight: 500; }
+.sc-hist { padding: 0; margin-bottom: 12px; overflow: hidden; }
+.sc-hist-main { display: block; width: 100%; text-align: left; background: none; border: none; padding: 14px 16px 10px; cursor: pointer; font: inherit; color: inherit; }
+.sc-hist-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.sc-hist-top .sc-small { margin: 0; flex: 1; }
+.sc-hist-top .role-tag { margin: 0; }
+.sc-hist-team { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 1.02rem; }
+.sc-hist-result { margin-top: 6px; color: #0e7490; font-weight: 600; font-size: 0.92rem; }
+.sc-hist-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 8px 16px 12px; border-top: 1px solid #eef2f6; }
+.sc-badge { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
+.sc-badge.live { background: #fee2e2; color: #b91c1c; }
+.sc-badge.over { background: #fef3c7; color: #92400e; }
+.sc-badge.saved { background: #dcfce7; color: #166534; }
+.sc-scroll { padding: 0; overflow-x: auto; }
+.sc-stats { white-space: nowrap; }
+.sc-stats td:first-child, .sc-stats th:first-child { width: auto; min-width: 140px; position: sticky; left: 0; background: #fff; }
+.sc-stats th:first-child { background: #dcecf3; }
+.sc-clickrow { cursor: pointer; }
+.sc-clickrow:hover td { background: #f7fafc; }
+.sc-stattabs { border-radius: 10px 10px 0 0; overflow: hidden; }
+.sc-filters { display: flex; gap: 8px; margin: 10px 0; }
+.sc-filters input { flex: 1; min-width: 0; }
+.sc-filters select { max-width: 45%; }
+
 @media (max-width: 720px) {
   .sc-card-view .sc-sb { min-width: 0; }
   .sc-sb td, .sc-sb th { padding: 8px 6px; font-size: 0.85rem; }

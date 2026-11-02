@@ -130,6 +130,7 @@ export function summarize(m, i) {
   const fow = [];
   const overs = [];
   const partnerships = [];
+  const fielding = {};
 
   const swap = () => { [S, N] = [N, S]; };
   const ensureBatter = (pid) => {
@@ -144,7 +145,7 @@ export function summarize(m, i) {
   };
   const ensureBowler = (pid) => {
     if (!bowlers[pid]) {
-      bowlers[pid] = { pid, name: nameBowl(pid), legal: 0, runs: 0, wk: 0, maidens: 0, wd: 0, nb: 0, overRuns: 0, overBalls: 0 };
+      bowlers[pid] = { pid, name: nameBowl(pid), legal: 0, runs: 0, wk: 0, maidens: 0, wd: 0, nb: 0, dots: 0, overRuns: 0, overBalls: 0 };
       bOrder.push(pid);
     }
     return bowlers[pid];
@@ -232,7 +233,7 @@ export function summarize(m, i) {
         striker.runs += bat;
         if (bat && ev.boundary === 4) striker.fours += 1;
         if (bat && ev.boundary === 6) striker.sixes += 1;
-        if (legalBall) { legal += 1; inOver += 1; bw.legal += 1; bw.overBalls += 1; }
+        if (legalBall) { legal += 1; inOver += 1; bw.legal += 1; bw.overBalls += 1; if (total === 0) bw.dots += 1; }
         if (part) { part.runs += total; if (legalBall) part.balls += 1; }
 
         const ran = ev.boundary ? 0 : ev.runs;
@@ -260,6 +261,11 @@ export function summarize(m, i) {
           }
           wk += 1;
           if (BOWLER_WICKETS.has(w.type)) bw.wk += 1;
+          const field = { caught: 'catches', stumped: 'stumpings', 'run out': 'runOuts' }[w.type];
+          if (field && w.fielder) {
+            const fd = fielding[w.fielder] || (fielding[w.fielder] = { pid: w.fielder, catches: 0, stumpings: 0, runOuts: 0 });
+            fd[field] += 1;
+          }
           fow.push({ wkt: wk, score: runs, pid: outPid, name: nameBat(outPid), over: fmtOvers(legal, bpo) });
           closePart();
           if (S === outPid) S = null; else if (N === outPid) N = null;
@@ -311,7 +317,7 @@ export function summarize(m, i) {
     i, team: inn.team, teamName: bt.name, runs, wickets: wk, legal, overs: fmtOvers(legal, bpo),
     extras, extrasTotal: extras.wd + extras.nb + extras.b + extras.lb + extras.pen,
     batters: batList, bowlers: bowlList, fow, completedOvers: overs, currentChips: chips,
-    partnership: part, partnerships, striker: S, nonStriker: N, bowler, lastBowler,
+    partnership: part, partnerships, fielding: Object.values(fielding), striker: S, nonStriker: N, bowler, lastBowler,
     opened, complete, reason, needs, freeHit, target, need, ballsLeft, crr, rrr, limit,
     available: available(), didNotBat: bt.players.filter((p) => !batters[p.pid]),
     bowlerOptions, battingPlayers: bt.players, fieldingPlayers: fl.players,

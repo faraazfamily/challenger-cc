@@ -28,7 +28,7 @@ type liveMatchRequest struct {
 
 // GET /api/scorer/live — matches that are still being scored.
 func (s *Server) ListLiveMatches(c *gin.Context) {
-	rows, err := s.DB.Query(`SELECT id, title, format, status, updated_at FROM live_matches WHERE status = 'live' ORDER BY updated_at DESC`)
+	rows, err := s.DB.Query(`SELECT id, title, format, status, updated_at FROM live_matches WHERE status = 'live' AND NOT archived ORDER BY updated_at DESC`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load live matches"})
 		return
@@ -46,6 +46,60 @@ func (s *Server) ListLiveMatches(c *gin.Context) {
 		list = append(list, gin.H{"id": id, "title": title, "format": format, "status": status, "updated_at": updated})
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+// GET /api/scorer/history[?archived=1] — every scored match (live and finished) with its full
+// state, so the History, Teams and Players screens can be worked out on the phone.
+func (s *Server) ListScorerHistory(c *gin.Context) {
+	archived := c.Query("archived") == "1"
+	rows, err := s.DB.Query(
+		`SELECT id, title, format, status, archived, match_id, state, created_at, updated_at
+		 FROM live_matches WHERE archived = $1 ORDER BY created_at DESC`, archived)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load scored matches"})
+		return
+	}
+	defer rows.Close()
+
+	list := []gin.H{}
+	for rows.Next() {
+		var id int
+		var title, format, status string
+		var arch bool
+		var matchID *int
+		var state []byte
+		var created, updated time.Time
+		if err := rows.Scan(&id, &title, &format, &status, &arch, &matchID, &state, &created, &updated); err != nil {
+			continue
+		}
+		list = append(list, gin.H{
+			"id": id, "title": title, "format": format, "status": status, "archived": arch,
+			"match_id": matchID, "state": json.RawMessage(state), "created_at": created, "updated_at": updated,
+		})
+	}
+	c.JSON(http.StatusOK, list)
+}
+
+// PUT /api/scorer/live/:id/archive {"archived": true|false} — hide a match from History
+// (and from the scorer's team / player stats) without deleting anything.
+func (s *Server) ArchiveLiveMatch(c *gin.Context) {
+	var req struct {
+		Archived bool `json:"archived"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "archived (true/false) is required"})
+		return
+	}
+	res, err := s.DB.Exec(`UPDATE live_matches SET archived = $1 WHERE id = $2`, req.Archived, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the match"})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Scored match not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "archived": req.Archived})
 }
 
 // GET /api/scorer/live/:id
@@ -254,6 +308,14 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 			return
 		}
 	}
+	// The autosave runs a moment after each ball, so the final state comes with the finish
+	// request too; History then always shows the complete match.
+	if st := c.PostForm("state"); st != "" && json.Valid([]byte(st)) {
+		if _, err := tx.Exec(`UPDATE live_matches SET state=$1::jsonb WHERE id=$2`, st, liveID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save the final score"})
+			return
+		}
+	}
 	if _, err := tx.Exec(`UPDATE live_matches SET status='finished', match_id=$1, updated_at=NOW() WHERE id=$2`, matchID, liveID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close the live match"})
 		return
@@ -263,28 +325,4 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"match_id": matchID, "pdf_url": pdfURL})
-}
-
-// PUT /api/matches/:id/in-records
-// Switches a saved match in or out of the club records. Nothing is deleted: the match and its
-// scorecard stay, but while it is switched off every stat query (player career, leaderboard,
-// compare, team record) ignores it. Switch it back on and everything returns.
-func (s *Server) SetMatchInRecords(c *gin.Context) {
-	var req struct {
-		InRecords bool `json:"in_records"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "in_records (true/false) is required"})
-		return
-	}
-	res, err := s.DB.Exec(`UPDATE matches SET in_records = $1 WHERE id = $2`, req.InRecords, c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the match"})
-		return
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Match not found"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "in_records": req.InRecords})
 }

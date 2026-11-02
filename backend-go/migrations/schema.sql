@@ -124,3 +124,19 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS result_note TEXT;
 
 -- Switch a match in/out of player stats, leaderboard and team record without deleting it.
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS in_records BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- ===== Scorer (KDM-style ball-by-ball scoring) =====
+-- The match being scored (whole match as JSON, saved after every ball). Finished matches stay
+-- here too: they make up the scorer's History, Teams and Players screens.
+CREATE TABLE IF NOT EXISTS live_matches (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT '',
+    format TEXT NOT NULL DEFAULT '',
+    state JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'live' CHECK (status IN ('live','finished')),
+    match_id INT REFERENCES matches(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+-- Archived matches are hidden from History and left out of the scorer's team / player stats.
+ALTER TABLE live_matches ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;
