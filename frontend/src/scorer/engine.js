@@ -8,7 +8,7 @@
 export const FORMATS = ['T10', 'T20', 'ODI', 'Test', 'Custom'];
 
 export function defaultConfig(format) {
-  const base = { format, ballsPerOver: 6, wideRuns: 1, noBallRuns: 1, freeHit: true, followOnLead: 0, inningsPerSide: 1 };
+  const base = { format, ballsPerOver: 6, wideRuns: 1, noBallRuns: 1, freeHit: true, followOnLead: 0, inningsPerSide: 1, playersPerSide: 11 };
   switch (format) {
     case 'T10': return { ...base, overs: 10, maxBowlerOvers: 2 };
     case 'T20': return { ...base, overs: 20, maxBowlerOvers: 4 };
@@ -152,8 +152,13 @@ export function summarize(m, i) {
   const available = () => bt.players.filter((p) => !batters[p.pid] || batters[p.pid].status === 'retired');
   const startPart = () => { if (S && N) part = { a: S, b: N, runs: 0, balls: 0, startScore: runs }; };
   const closePart = () => { if (part) { partnerships.push({ ...part, aName: nameBat(part.a), bName: nameBat(part.b) }); part = null; } };
+  // Players can be added while scoring, so with playersPerSide set the innings ends on
+  // wickets (10 for 11-a-side), not when the typed-in list runs out. Older matches had a
+  // fixed lineup and no playersPerSide.
+  const pps = cfg.playersPerSide || 0;
   const checkAllOut = () => {
-    if (!complete && (S === null || N === null) && available().length === 0) { complete = true; reason = 'allout'; }
+    if (complete || (S !== null && N !== null)) return;
+    if (pps ? wk >= pps - 1 : available().length === 0) { complete = true; reason = 'allout'; }
   };
   const chip = (ev) => {
     if (ev.wicket) return { t: 'w', label: ev.runs ? `W+${ev.runs}` : 'W' };
@@ -354,6 +359,21 @@ export const renamePlayer = (m, team, pid, name) => {
   if (!clean) return m;
   return { ...m, teams: m.teams.map((t, k) => (k !== team ? t : { ...t, players: t.players.map((p) => (p.pid === pid ? { ...p, name: clean } : p)) })) };
 };
+
+// Players are created "on the go" (KDM-style): a pick is either an existing pid, a squad
+// member ({ playerId, name }) or just a typed name. Returns the match with that player in
+// the team plus their pid.
+export function withPlayer(m, team, pick) {
+  if (pick.pid) return { m, pid: pick.pid };
+  const players = m.teams[team].players;
+  const name = String(pick.name || '').trim();
+  const found = pick.playerId
+    ? players.find((p) => p.playerId === pick.playerId)
+    : players.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (found) return { m, pid: found.pid };
+  const p = { pid: newPid(pick.playerId ? 'p' : 'g'), playerId: pick.playerId || null, name };
+  return { m: { ...m, teams: m.teams.map((t, k) => (k !== team ? t : { ...t, players: [...t.players, p] })) }, pid: p.pid };
+}
 
 export const setOverride = (m, resultOverride) => ({ ...m, resultOverride });
 
