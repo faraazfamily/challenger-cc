@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import * as E from './engine';
-import ScorecardView from './ScorecardView';
+import ScorecardView, { shareScorecard } from './ScorecardView';
+import Analysis from './Analysis';
 import PlayerInput from './PlayerInput';
 
 function Modal({ title, onClose, children }) {
@@ -68,6 +69,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
   const [ex, setEx] = useState(NO_EXTRAS);
   const [squad, setSquad] = useState([]);
   const [moreRuns, setMoreRuns] = useState(7);
+  const [shareNote, setShareNote] = useState('');
   const [modal, setModal] = useState(null);
   const [view, setView] = useState('score');
   const [saveState, setSaveState] = useState('');
@@ -217,9 +219,11 @@ export default function ScorerLive({ initial, serverId, onExit }) {
       <div className="sc-topbar">
         <button className="btn btn-secondary btn-sm" onClick={onExit}>← Exit</button>
         <span className="sc-save">{saved ? 'Match saved' : saveText}</span>
-        <button className="btn btn-secondary btn-sm" onClick={() => setView(view === 'score' ? 'card' : 'score')}>
-          {view === 'score' ? 'Full scorecard' : 'Back to scoring'}
-        </button>
+        <span className="sc-topbtns">
+          {view !== 'score' && <button className="btn btn-secondary btn-sm" onClick={() => setView('score')}>Back to scoring</button>}
+          {view !== 'analysis' && <button className="btn btn-secondary btn-sm" onClick={() => setView('analysis')}>Analysis</button>}
+          {view !== 'card' && <button className="btn btn-secondary btn-sm" onClick={() => setView('card')}>Scoreboard</button>}
+        </span>
       </div>
 
       <div className="sc-board">
@@ -239,6 +243,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
       </div>
 
       {view === 'card' && <ScorecardView match={match} />}
+      {view === 'analysis' && <Analysis match={match} />}
 
       {view === 'score' && sum.opened && !sum.complete && (
         <div className="card sc-crease">
@@ -336,6 +341,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-primary" onClick={finish} disabled={busy}>{busy ? 'Saving...' : 'Save match & update player stats'}</button>
                 <button className="btn btn-secondary" onClick={downloadPdf}>Download PDF</button>
+                <button className="btn btn-secondary" onClick={async () => setShareNote(await shareScorecard(match))}>Share</button>
                 <button className="btn btn-secondary" onClick={undo}>{match.resultOverride ? 'Cancel this result' : 'Undo last ball'}</button>
               </div>
             </>
@@ -346,12 +352,14 @@ export default function ScorerLive({ initial, serverId, onExit }) {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <Link className="btn btn-primary" to={`/matches/${saved.match_id}`}>Open match</Link>
                 <button className="btn btn-secondary" onClick={downloadPdf}>Download PDF</button>
+                <button className="btn btn-secondary" onClick={async () => setShareNote(await shareScorecard(match))}>Share</button>
                 <button className="btn btn-secondary" onClick={onExit}>Back to scorer</button>
               </div>
             </>
           )}
         </div>
       )}
+      {shareNote && view === 'score' && step.kind === 'done' && <div className="review-note">{shareNote}</div>}
       {error && !modal && <div className="error-text" style={{ margin: '12px 0' }}>{error}</div>}
 
       {/* ---- required pickers ---- */}

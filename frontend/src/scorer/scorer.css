@@ -139,7 +139,42 @@
 .sc-run.sc-six { background: var(--navy-light); color: var(--gold-light); border-color: var(--navy-light); }
 .sc-mtable { min-width: 0; width: 100%; }
 
+
+/* KDM-style scoreboard */
+.sc-topbtns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sc-toss { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.sc-inns { margin-bottom: 12px; }
+.sc-inns-head {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 13px 14px; background: var(--navy-light); color: #fff; border: none; cursor: pointer; font-size: 1rem; text-align: left;
+}
+.sc-chev { display: inline-block; margin-left: 8px; transform: rotate(180deg); transition: transform 0.15s ease; }
+.sc-chev.open { transform: none; }
+.sc-sb { min-width: 0; width: 100%; }
+.sc-sb th { background: #dcecf3; color: #2c4a5a; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.sc-sb td:first-child, .sc-sb th:first-child { width: 46%; }
+.sc-how { color: #6b7280; font-size: 0.8rem; margin-top: 2px; }
+.sc-sb-row td { background: #f7fafc; }
+.sc-right { text-align: right; }
+.sc-pad14 { padding: 0 14px 10px !important; }
+
+/* analysis charts */
+.sc-analysis { margin-bottom: 14px; }
+.sc-atabs { display: flex; background: var(--navy-light); }
+.sc-atabs button { flex: 1; padding: 13px 8px; background: none; border: none; border-bottom: 3px solid transparent; color: #9fb3cc; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; }
+.sc-atabs button.on { color: #fff; border-bottom-color: var(--gold); }
+.sc-abody { padding: 12px 10px 14px; }
+.sc-chart { width: 100%; max-width: 640px; height: auto; display: block; margin: 0 auto; }
+.sc-grid { stroke: #e5e7eb; }
+.sc-axis { stroke: #9ca3af; }
+.sc-tick { font-size: 14px; fill: #6b7280; }
+.sc-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 8px 6px 0; font-size: 0.85rem; font-weight: 600; }
+.sc-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.sc-legend .sc-small { margin: 0; font-weight: 400; }
+
 @media (max-width: 720px) {
+  .sc-card-view .sc-sb { min-width: 0; }
+  .sc-sb td, .sc-sb th { padding: 8px 6px; font-size: 0.85rem; }
   .sc-padgrid { grid-template-columns: 1fr; }
   .sc-utils { flex-direction: row; flex-wrap: wrap; }
   .sc-utils .btn { width: auto; flex: 1; }

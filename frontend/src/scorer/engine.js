@@ -398,7 +398,7 @@ export function matchResult(m) {
     const chaser = m.innings[k].team;
     const defender = 1 - chaser;
     const tgt = s.target;
-    const left = m.teams[chaser].players.length - 1 - s.wickets;
+    const left = (m.config.playersPerSide || m.teams[chaser].players.length) - 1 - s.wickets;
     if (s.runs >= tgt) {
       return { done: true, type: 'win', winner: chaser, text: winText(m, chaser, `${left} wicket${left === 1 ? '' : 's'}${ballsLeftText(s)}`) };
     }
@@ -537,4 +537,44 @@ export function buildFinishPayload(m) {
 }
 
 export const matchTitle = (m) => `${m.teams[0].name} v/s ${m.teams[1].name}`;
+
+export const tossText = (m) => `${teamName(m, m.toss.winner)} won the toss and opted to ${m.toss.elected === 'bat' ? 'Bat' : 'Bowl'} first.`;
+
+export function inningsLabel(m, i) {
+  const team = m.innings[i].team;
+  let nth = 0;
+  for (let k = 0; k <= i; k++) if (m.innings[k].team === team) nth += 1;
+  const two = (m.config.inningsPerSide || 1) === 2;
+  return `${teamName(m, team)}${two ? ` ${nth === 1 ? '1st' : '2nd'} inns` : ''}`;
+}
+
+// Score after every over of an innings, for the worm / run-rate / manhattan charts.
+// points: [{ x: overs as a number (3.5 overs = 3.833), runs }]; wickets: same shape.
+export function progression(m, i) {
+  const s = summarize(m, i);
+  const bpo = m.config.ballsPerOver || 6;
+  const points = [{ x: 0, runs: 0 }];
+  let tot = 0;
+  s.completedOvers.forEach((o, k) => { tot += o.runs; points.push({ x: k + 1, runs: tot }); });
+  if (s.legal > s.completedOvers.length * bpo) points.push({ x: s.legal / bpo, runs: s.runs });
+  const toX = (over) => { const [o, b] = String(over).split('.').map(Number); return o + (b || 0) / bpo; };
+  const wickets = s.fow.map((f) => ({ x: toX(f.over), runs: f.score }));
+  return { s, points, wickets, perOver: s.completedOvers.map((o) => o.runs) };
+}
+
+// Plain-text scorecard for the Share button.
+export function shareText(m) {
+  const lines = [matchTitle(m), tossText(m), ''];
+  m.innings.forEach((_, i) => {
+    const s = summarize(m, i);
+    lines.push(`${inningsLabel(m, i)}: ${s.runs}/${s.wickets}${s.declared ? 'd' : ''} (${s.overs} ov)`);
+    s.batters.filter((b) => b.balls || b.runs).sort((a, b) => b.runs - a.runs).slice(0, 3)
+      .forEach((b) => lines.push(`  ${b.name} ${b.runs}${b.status === 'out' ? '' : '*'} (${b.balls})`));
+    s.bowlers.filter((b) => b.wk).sort((a, b) => b.wk - a.wk || a.runs - b.runs).slice(0, 2)
+      .forEach((b) => lines.push(`  ${b.name} ${b.wk}/${b.runs} (${b.overs})`));
+  });
+  const res = matchResult(m);
+  if (res.done) lines.push('', res.text);
+  return lines.join('\n');
+}
 export const playerLabel = playerName;
