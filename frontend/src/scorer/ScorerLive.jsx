@@ -227,7 +227,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
   const batName = (pid) => sum.battingPlayers.find((p) => p.pid === pid)?.name || '?';
 
   return (
-    <div className="sc-wrap">
+    <div className={`sc-wrap ${view === 'score' && playable ? 'playing' : ''}`}>
       <div className="sc-topbar">
         <button className="btn btn-secondary btn-sm" onClick={onExit}>← Exit</button>
         <span className="sc-save">{saved ? 'Match saved' : saveText}</span>

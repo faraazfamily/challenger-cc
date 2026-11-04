@@ -15,6 +15,14 @@ export default function Admin() {
   const [params, setParams] = useSearchParams();
   const tab = TABS.find((t) => slug(t) === params.get('tab')) || TABS[0];
   const setTab = (t) => setParams({ tab: slug(t) });
+  // While a match is being set up / scored / viewed, the scorer gets the whole screen
+  // (it has its own Exit button); on a phone that keeps the run keys in reach.
+  const focus = tab === 'Scorer' && ['new', 'live', 'view'].some((k) => params.get(k));
+
+  // On a phone the tab strip scrolls sideways: bring the open tab into view after a refresh.
+  useEffect(() => {
+    document.querySelector('.admin-tabs .stat-tab.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [tab, focus]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,15 +37,19 @@ export default function Admin() {
 
   return (
     <div className="container section">
+      {!focus && (
+      <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>Admin Panel</h2>
         <button className="btn btn-secondary btn-sm" onClick={logout}>Log Out</button>
       </div>
-      <div className="stat-tabs">
+      <div className="stat-tabs admin-tabs">
         {TABS.map((t) => (
           <button key={t} type="button" className={`stat-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
+      </>
+      )}
       {tab === 'Players' && <AdminPlayers />}
       {tab === 'Matches' && <AdminMatches />}
       {tab === 'Scorer' && <AdminScorer />}

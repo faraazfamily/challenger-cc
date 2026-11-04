@@ -1,0 +1,203 @@
+/* Site-wide motion and UI polish, on the same navy + sky-blue theme as index.css.
+   Reveal-on-scroll is driven by motion.jsx (adds html.motion, then .in per element).
+   Animations use fill-mode "backwards" (not "both") so finished ones never pin a transform:
+   that keeps hover effects working and position:fixed children (modals, keypad) on screen. */
+
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- reveal on scroll ---------- */
+html.motion :is([data-reveal], .player-card):not(.in) { opacity: 0; }
+html.motion :is([data-reveal], .player-card).in { animation: reveal-up 0.6s var(--ease-out) var(--rd, 0ms) backwards; }
+html.motion h2[data-reveal].in { animation-name: reveal-left; }
+@keyframes reveal-up { from { opacity: 0; transform: translateY(22px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes reveal-left { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+
+/* section headings: the sky-blue bar grows in */
+.section h2[data-reveal] { position: relative; border-left-color: transparent; }
+.section h2[data-reveal]::before {
+  content: ''; position: absolute; left: -5px; top: 0; bottom: 0; width: 5px; background: var(--gold); border-radius: 2px;
+  transform-origin: top;
+}
+html.motion .section h2[data-reveal].in::before { animation: bar-grow 0.5s var(--ease-out) calc(var(--rd, 0ms) + 150ms) backwards; }
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* ---------- buttons, tabs, links ---------- */
+.btn { position: relative; overflow: hidden; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn-primary::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+.btn-primary:hover::after { transition: transform 0.7s ease; transform: translateX(120%); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.stat-tab { transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+.stat-tab:hover { transform: translateY(-1px); }
+.stat-tab.active { box-shadow: 0 6px 16px rgba(59,182,220,0.3); }
+
+/* navbar: links get a growing underline */
+.navbar nav a { position: relative; }
+.navbar nav a::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 2px; background: var(--gold-light);
+  transform: scaleX(0); transform-origin: left; transition: transform 0.25s var(--ease-out);
+}
+.navbar nav a:hover::after, .navbar nav a.active::after { transform: scaleX(1); }
+.crest-logo { transition: transform 0.3s var(--ease-spring); }
+.brand:hover .crest-logo { transform: rotate(-8deg) scale(1.08); }
+
+/* ---------- home hero ---------- */
+.hero { position: relative; overflow: hidden; }
+.hero::before {
+  /* a slow light sweep across the hero, like floodlights */
+  content: ''; position: absolute; inset: -40% -60%; pointer-events: none;
+  background: linear-gradient(115deg, transparent 42%, rgba(103,212,240,0.10) 50%, transparent 58%);
+  animation: sweep 7s ease-in-out 1s infinite;
+}
+@keyframes sweep { from { transform: translateX(-35%); } to { transform: translateX(35%); } }
+.hero .container { position: relative; }
+.hero-logo { animation: crest-drop 0.9s var(--ease-spring) backwards, floaty 4s ease-in-out 0.9s infinite; }
+@keyframes crest-drop { from { opacity: 0; transform: translateY(-40px) scale(0.6) rotate(-10deg); } to { opacity: 1; transform: none; } }
+.hero-title { animation: title-in 0.8s var(--ease-out) 0.25s backwards; letter-spacing: 0.5px; }
+@keyframes title-in { from { opacity: 0; letter-spacing: 6px; filter: blur(6px); } to { opacity: 1; } }
+.hero-tagline { animation: reveal-up 0.7s var(--ease-out) 0.5s backwards; }
+
+/* ---------- cards ---------- */
+.card { transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease; }
+.stat-row .card:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(59,182,220,0.22); }
+
+/* ---------- player card: the avatar walks in toward the screen ---------- */
+.player-card { animation: none; }
+.player-card:hover { transform: translateY(-6px); box-shadow: 0 14px 30px rgba(59,182,220,0.25); border-color: var(--gold); }
+.pc-stage { position: relative; display: flex; justify-content: center; perspective: 700px; padding-bottom: 6px; }
+.pc-floor {
+  position: absolute; bottom: 4px; left: 50%; width: 80px; height: 12px; margin-left: -40px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(18,20,28,0.35), transparent); pointer-events: none;
+}
+.player-card .pc-avatar { position: relative; z-index: 1; transition: transform 0.3s var(--ease-out), box-shadow 0.3s ease; }
+.player-card:hover .pc-avatar { transform: scale(1.06); box-shadow: 0 0 0 5px rgba(59,182,220,0.25); }
+html.motion .player-card.in .pc-avatar { animation: walk-in 1.15s var(--ease-out) calc(var(--rd, 0ms) + 120ms) backwards, pose-ring 0.9s ease-out calc(var(--rd, 0ms) + 1.2s) backwards; }
+html.motion .player-card.in .pc-floor { animation: floor-in 1.15s var(--ease-out) calc(var(--rd, 0ms) + 120ms) backwards; }
+html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-spring) calc(var(--rd, 0ms) + 1s) backwards; }
+
+/* Walking toward the camera: starts small and blurred at the back, bobs with each step while it
+   comes closer, overshoots a touch as it stops, then "plants" (a small squash) into its pose. */
+@keyframes walk-in {
+  0%   { opacity: 0; transform: translate3d(0, -14px, -480px); filter: blur(5px) brightness(0.55); }
+  14%  { opacity: 1; }
+  26%  { transform: translate3d(-3px, -6px, -360px); }
+  38%  { transform: translate3d(3px, -16px, -260px); filter: blur(3px) brightness(0.7); }
+  50%  { transform: translate3d(-3px, -6px, -170px); }
+  62%  { transform: translate3d(3px, -14px, -90px); filter: blur(1px) brightness(0.88); }
+  76%  { transform: translate3d(0, -2px, 26px); filter: none; }
+  88%  { transform: translate3d(0, 3px, 0) scale(1.02, 0.96); }
+  100% { transform: none; }
+}
+@keyframes floor-in { 0% { opacity: 0; transform: scale(0.3); } 76% { opacity: 1; transform: scale(1.15); } 100% { transform: none; } }
+@keyframes pose-ring { from { box-shadow: 0 0 0 0 rgba(103,212,240,0.75); } to { box-shadow: 0 0 0 14px rgba(103,212,240,0); } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.3); } 70% { transform: scale(1.15); } to { opacity: 1; transform: none; } }
+
+/* ---------- player profile stage ---------- */
+.stage {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: center;
+  padding: 34px 32px; margin-bottom: 34px; border-radius: 18px; color: #eaf3fb;
+  background:
+    radial-gradient(ellipse at 22% 105%, rgba(59,182,220,0.22), transparent 55%),
+    linear-gradient(160deg, #0b0d14 0%, #1b2a48 100%);
+  border: 1px solid rgba(59,182,220,0.35);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+}
+.stage-number {
+  position: absolute; right: -10px; bottom: -60px; font: 900 15rem/1 Georgia, serif; color: transparent;
+  -webkit-text-stroke: 2px rgba(103,212,240,0.16); pointer-events: none; user-select: none;
+  animation: number-in 1.2s var(--ease-out) 0.2s backwards;
+}
+@keyframes number-in { from { opacity: 0; transform: translateX(80px); } to { opacity: 1; transform: none; } }
+.stage-spot {
+  /* the spotlight the player walks into */
+  position: absolute; left: 0; top: -40px; width: 300px; height: 120%; pointer-events: none;
+  background: conic-gradient(from 180deg at 50% 0%, transparent 160deg, rgba(160,225,245,0.16) 172deg, rgba(160,225,245,0.22) 180deg, rgba(160,225,245,0.16) 188deg, transparent 200deg);
+  animation: spot-on 1s ease-out backwards;
+}
+@keyframes spot-on { 0% { opacity: 0; } 30% { opacity: 1; } 45% { opacity: 0.35; } 60% { opacity: 1; } 100% { opacity: 1; } }
+.stage-figure { position: relative; display: flex; justify-content: center; align-items: flex-end; height: 250px; perspective: 800px; }
+.stage-avatar, .stage-avatar.player-photo-placeholder {
+  position: relative; z-index: 1; width: 190px; height: 190px; border-radius: 50%; object-fit: cover;
+  border: 4px solid var(--gold); font-size: 3.2rem; margin-bottom: 18px;
+  box-shadow: 0 0 40px rgba(59,182,220,0.35);
+  animation: walk-in 1.5s var(--ease-out) 0.35s backwards, pose-ring 1s ease-out 1.9s backwards;
+}
+.stage-video {
+  position: relative; z-index: 1; width: 100%; max-width: 240px; height: 250px; object-fit: cover; border-radius: 16px;
+  border: 2px solid rgba(59,182,220,0.5); background: #0b0d14; animation: reveal-up 0.6s var(--ease-out) backwards;
+}
+.stage-floor {
+  position: absolute; bottom: 6px; left: 50%; width: 200px; height: 26px; margin-left: -100px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(103,212,240,0.35), transparent); animation: floor-in 1.5s var(--ease-out) 0.35s backwards;
+}
+.stage-figure.has-video .stage-floor { display: none; }
+.stage-info { position: relative; z-index: 1; min-width: 0; }
+.stage-kicker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; animation: reveal-up 0.6s var(--ease-out) 1.2s backwards; }
+.stage-kicker .role-tag { margin: 0; background: rgba(59,182,220,0.18); border: 1px solid rgba(59,182,220,0.5); }
+.stage-chip { font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; background: var(--gold); color: #071018; }
+.stage-name { margin: 10px 0 6px; font-size: 2.6rem; line-height: 1.1; color: #fff; }
+.stage-name span { display: inline-block; margin-right: 0.28em; animation: word-in 0.7s var(--ease-out) calc(1.3s + var(--w) * 0.12s) backwards; }
+@keyframes word-in { from { opacity: 0; transform: translateY(70%) rotate(4deg); filter: blur(4px); } to { opacity: 1; transform: none; } }
+.stage-bio { color: #b9c8db; margin: 0 0 14px; animation: reveal-up 0.6s var(--ease-out) 1.55s backwards; }
+.stage-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.stage-stats div {
+  padding: 10px 8px; border-radius: 12px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(59,182,220,0.25);
+  animation: reveal-up 0.5s var(--ease-out) calc(1.6s + var(--s) * 0.08s) backwards;
+}
+.stage-stats strong { display: block; font-size: 1.5rem; color: var(--gold-light); }
+.stage-stats span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: #9fb3cc; }
+.stage-styles { display: grid; gap: 4px; font-size: 0.9rem; color: #d7e4f1; animation: reveal-up 0.6s var(--ease-out) 1.8s backwards; }
+.stage-styles span { display: inline-block; min-width: 72px; color: #8fa6bf; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; }
+.stage-replay {
+  margin-top: 14px; background: none; border: 1px solid rgba(59,182,220,0.5); color: var(--gold-light); border-radius: 20px;
+  padding: 6px 14px; font-weight: 700; cursor: pointer; transition: background 0.2s ease;
+  animation: reveal-up 0.5s var(--ease-out) 2s backwards;
+}
+.stage-replay:hover { background: rgba(59,182,220,0.15); }
+
+/* ---------- leaderboard ---------- */
+.lb-rank {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;
+  font-weight: 800; font-size: 0.85rem; background: #eef2f6; color: #4b5563;
+}
+.lb-rank.r1 { background: linear-gradient(135deg, #ffe08a, #f5b700); color: #4a3500; box-shadow: 0 0 0 3px rgba(245,183,0,0.25); }
+.lb-rank.r2 { background: linear-gradient(135deg, #f1f4f8, #b8c2cf); color: #334155; }
+.lb-rank.r3 { background: linear-gradient(135deg, #f3c6a0, #c7814a); color: #4a2a10; }
+.lb-top td { font-weight: 700; }
+
+/* ---------- mobile menu ---------- */
+@media (max-width: 900px) {
+  .navbar nav.open { animation: menu-down 0.25s var(--ease-out); }
+  .navbar nav.open a { animation: reveal-left 0.35s var(--ease-out) backwards; }
+  .navbar nav.open a:nth-child(2) { animation-delay: 0.04s; }
+  .navbar nav.open a:nth-child(3) { animation-delay: 0.08s; }
+  .navbar nav.open a:nth-child(4) { animation-delay: 0.12s; }
+  .navbar nav.open a:nth-child(5) { animation-delay: 0.16s; }
+  .navbar nav.open a:nth-child(6) { animation-delay: 0.2s; }
+  .navbar nav a::after { display: none; }
+}
+@media (max-width: 720px) {
+  .stage { grid-template-columns: 1fr; text-align: center; padding: 24px 16px; gap: 6px; }
+  .stage-figure { height: 210px; }
+  .stage-avatar, .stage-avatar.player-photo-placeholder { width: 150px; height: 150px; font-size: 2.6rem; }
+  .stage-spot { left: 50%; margin-left: -150px; }
+  .stage-number { font-size: 10rem; bottom: -30px; }
+  .stage-kicker { justify-content: center; }
+  .stage-name { font-size: 2rem; }
+  .stage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stage-styles { text-align: left; }
+}
+@keyframes menu-down { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- less motion when the phone asks for it ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .hero::before { display: none; }
+}

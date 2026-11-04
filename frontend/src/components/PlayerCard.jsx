@@ -18,8 +18,12 @@ export function PlayerAvatar({ player, className = '' }) {
 export default function PlayerCard({ player }) {
   return (
     <Link to={`/players/${player.id}`} className="card player-card">
-      <PlayerAvatar player={player} />
-      {player.jersey_number ? <div className="jersey-badge">{player.jersey_number}</div> : null}
+      {/* the avatar "walks in" toward the screen when the card scrolls into view (motion.css) */}
+      <div className="pc-stage">
+        <PlayerAvatar player={player} className="pc-avatar" />
+        <span className="pc-floor" aria-hidden="true" />
+      </div>
+      {player.jersey_number ? <div className="jersey-badge pc-jersey">{player.jersey_number}</div> : null}
       <h3>{player.name}</h3>
       <span className="role-tag">{player.role}</span>
       <div>

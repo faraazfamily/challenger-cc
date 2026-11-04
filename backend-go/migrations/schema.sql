@@ -141,3 +141,6 @@ CREATE TABLE IF NOT EXISTS scorer_matches (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Optional short clip per player (e.g. walks in and folds arms), played once on the profile.
+ALTER TABLE players ADD COLUMN IF NOT EXISTS intro_video_url TEXT;

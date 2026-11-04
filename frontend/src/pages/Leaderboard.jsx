@@ -22,7 +22,7 @@ export default function Leaderboard() {
 
   return (
     <div className="container section">
-      <h2>Leaderboard</h2>
+      <h2 data-reveal>Leaderboard</h2>
       <div className="stat-tabs">
         {TABS.map((t) => (
           <div key={t.key} className={`stat-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>{t.label}</div>
@@ -41,8 +41,9 @@ export default function Leaderboard() {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.id}>
-                  <td>{i + 1}</td>
+                // keyed by tab, so switching tabs re-plays the row reveal
+                <tr key={`${tab}-${r.id}`} data-reveal className={i < 3 ? 'lb-top' : ''}>
+                  <td><span className={`lb-rank r${i + 1}`}>{i + 1}</span></td>
                   <td><Link to={`/players/${r.id}`}>{r.name}</Link></td>
                   {activeTab.cols.map(([key]) => <td key={key}>{r[key]}</td>)}
                 </tr>

@@ -51,7 +51,7 @@ export default function PlayerInput({ options = [], squad = [], onPick, placehol
       <div className="sc-pin-box">
         <input value={q} placeholder={placeholder} autoComplete="off"
           onChange={(e) => { setQ(e.target.value); setHi(-1); }} onKeyDown={key}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+          onFocus={() => setFocused(true)} onClick={() => setFocused(true)} onBlur={() => setFocused(false)} />
         {!alwaysOpen && <span className="sc-pin-caret" aria-hidden="true">▾</span>}
       </div>
       {open && (

@@ -32,6 +32,8 @@ a { color: inherit; text-decoration: none; }
   background: var(--navy);
   color: white;
   padding: 16px 0;
+  /* home-screen app on iPhone draws under the status bar (black-translucent) */
+  padding-top: calc(16px + env(safe-area-inset-top));
   border-bottom: 3px solid var(--gold);
 }
 .navbar .container { display: flex; align-items: center; justify-content: space-between; }
@@ -66,7 +68,7 @@ a { color: inherit; text-decoration: none; }
 .hero h1 { font-size: 2.6rem; margin: 0 0 8px; color: #fff; }
 .hero p { color: #c9d3e8; font-size: 1.1rem; max-width: 560px; margin: 0 auto; }
 
-.section { padding: 48px 0; animation: rise 0.5s ease both; }
+.section { padding-top: 48px; padding-bottom: 48px; animation: rise 0.5s ease backwards; } /* "backwards", not "both": a finished transform animation would trap position:fixed children (modals, the scorer keypad) inside the section */
 .section h2, .section h3 { color: #f4f8fc; border-left: 5px solid var(--gold); padding-left: 12px; margin-bottom: 24px; }
 .card h1, .card h2, .card h3, .card p, .card label, .card td { color: var(--text-dark); }
 .card h2, .card h3 { border-left: none; padding-left: 0; }
@@ -227,8 +229,8 @@ tr:hover td { background: #faf9f5; }
 }
 @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
-@media (max-width: 720px) {
-  .container { padding: 0 14px; }
+/* the six nav links stop fitting on one line well before phone width: use the menu button up to 900px */
+@media (max-width: 900px) {
   .navbar .container { flex-wrap: wrap; }
   .nav-toggle { display: inline-block; }
   .navbar nav {
@@ -237,21 +239,53 @@ tr:hover td { background: #faf9f5; }
   }
   .navbar nav.open { display: flex; }
   .navbar nav a { padding: 12px 4px; border-top: 1px solid rgba(59,182,220,0.2); }
+}
+
+@media (max-width: 720px) {
+  .container { padding: 0 14px; }
   .hero { padding: 36px 0 40px; }
   .hero h1 { font-size: 1.8rem; }
   .hero-logo { width: 110px; height: 110px; }
-  .section { padding: 28px 0; }
+  .section { padding-top: 28px; padding-bottom: 28px; } /* top/bottom only: keep .container side padding */
   .form-row, .upload-panel, .photo-picker, .squad-toolbar { flex-direction: column; align-items: stretch; }
   .filter-bar .form-group { min-width: 0; width: 100%; }
   .compare-stage { grid-template-columns: 1fr; }
   .compare-vs { justify-self: center; }
   .modal-card { padding: 16px; }
-  .grid-3 { grid-template-columns: 1fr; }
+  /* phones: player cards two per row, record tiles three across */
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .player-card { padding: 14px 10px; }
+  .player-card img, .player-card .player-photo-placeholder { width: 72px; height: 72px; font-size: 1.3rem; }
+  .player-card h3 { font-size: 1rem; overflow-wrap: anywhere; }
+  /* one-row career tables become a grid of number tiles */
+  .career-table { min-width: 0; }
+  .career-table thead { display: none; }
+  .career-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .career-table td { display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; padding: 12px 6px; border-bottom: 1px solid #eee; font-size: 1.15rem; font-weight: 800; white-space: normal; text-align: center; }
+  .career-table td::after { content: attr(data-label); font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .stat-row .card { padding: 14px 6px !important; font-size: 0.82rem; }
+  .stat-row h2 { font-size: 1.5rem; }
   .stat-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; }
   .stat-tab { flex: none; }
   .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 560px; font-size: 0.85rem; }
-  th, td { padding: 8px 12px; white-space: nowrap; }
+  /* tables fill the card; only ones with many columns scroll sideways (inside their card) */
+  table { min-width: 100%; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; white-space: nowrap; }
+  /* match list: each match is a tappable card row */
+  .match-table thead { display: none; }
+  .match-table tr {
+    position: relative; display: grid; grid-template-columns: 1fr auto; column-gap: 10px;
+    grid-template-areas: "opp res" "score score" "meta meta"; padding: 12px 14px; border-bottom: 1px solid #eee;
+  }
+  .match-table td { padding: 0; border: none; white-space: normal; }
+  .match-table .mt-opp { grid-area: opp; font-weight: 800; font-size: 1rem; }
+  .match-table .mt-opp a::after { content: ''; position: absolute; inset: 0; }
+  .match-table .mt-res { grid-area: res; text-align: right; }
+  .match-table .mt-score { grid-area: score; margin-top: 4px; font-weight: 600; }
+  .match-table .mt-date, .match-table .mt-tour { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+  .match-table .mt-date { grid-area: meta; }
+  .match-table .mt-tour { grid-area: meta; justify-self: end; text-align: right; }
   .squad-list { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .squad-row { min-width: 340px; flex-direction: row; align-items: center; }
   .squad-row .jersey-badge { flex: none; width: auto; align-self: center; }

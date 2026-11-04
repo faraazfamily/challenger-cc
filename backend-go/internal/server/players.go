@@ -18,13 +18,13 @@ type scanner interface {
 func scanPlayerRow(row scanner) (gin.H, error) {
 	var id int
 	var name, role string
-	var battingStyle, bowlingStyle, bio, fieldingNotes, photoURL sql.NullString
+	var battingStyle, bowlingStyle, bio, fieldingNotes, photoURL, introVideoURL sql.NullString
 	var jerseyNumber sql.NullInt32
 	var isCaptain, isViceCaptain, isWicketkeeper bool
 	var joinedDate sql.NullTime
 
 	err := row.Scan(&id, &name, &role, &battingStyle, &bowlingStyle, &jerseyNumber,
-		&bio, &fieldingNotes, &photoURL, &isCaptain, &isViceCaptain, &isWicketkeeper, &joinedDate)
+		&bio, &fieldingNotes, &photoURL, &isCaptain, &isViceCaptain, &isWicketkeeper, &joinedDate, &introVideoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +37,7 @@ func scanPlayerRow(row scanner) (gin.H, error) {
 		"bio":             nullableString(bio),
 		"fielding_notes":  nullableString(fieldingNotes),
 		"photo_url":       nullableString(photoURL),
+		"intro_video_url": nullableString(introVideoURL),
 		"is_captain":       isCaptain,
 		"is_vice_captain":  isViceCaptain,
 		"is_wicketkeeper":  isWicketkeeper,
@@ -44,7 +45,7 @@ func scanPlayerRow(row scanner) (gin.H, error) {
 	}, nil
 }
 
-const playerColumns = `id, name, role, batting_style, bowling_style, jersey_number, bio, fielding_notes, photo_url, is_captain, is_vice_captain, is_wicketkeeper, joined_date`
+const playerColumns = `id, name, role, batting_style, bowling_style, jersey_number, bio, fielding_notes, photo_url, is_captain, is_vice_captain, is_wicketkeeper, joined_date, intro_video_url`
 
 // GET /api/players
 func (s *Server) GetPlayers(c *gin.Context) {
@@ -163,6 +164,19 @@ func saveUploadedPhoto(c *gin.Context, s *Server, field string) (string, bool, e
 	return url, true, nil
 }
 
+// saveUploadedVideo is saveUploadedPhoto for the optional intro clip.
+func saveUploadedVideo(c *gin.Context, s *Server, field string) (string, bool, error) {
+	file, err := c.FormFile(field)
+	if err != nil {
+		return "", false, nil
+	}
+	url, err := s.storeVideo(file)
+	if err != nil {
+		return "", false, err
+	}
+	return url, true, nil
+}
+
 // otherLeader reports who already holds captain or vice-captain, excluding the player being edited.
 func (s *Server) otherLeader(wantCaptain, wantVice bool, exceptID string) (string, error) {
 	if !wantCaptain && !wantVice {
@@ -254,6 +268,11 @@ func (s *Server) CreatePlayer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": photoErr.Error()})
 		return
 	}
+	videoURL, _, videoErr := saveUploadedVideo(c, s, "intro_video")
+	if videoErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": videoErr.Error()})
+		return
+	}
 
 	var joinedParam interface{}
 	if v := c.PostForm("joined_date"); v != "" {
@@ -261,12 +280,12 @@ func (s *Server) CreatePlayer(c *gin.Context) {
 	}
 
 	row := s.DB.QueryRow(
-		`INSERT INTO players (name, role, batting_style, bowling_style, jersey_number, bio, fielding_notes, photo_url, is_captain, is_vice_captain, is_wicketkeeper, joined_date)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::date, CURRENT_DATE))
+		`INSERT INTO players (name, role, batting_style, bowling_style, jersey_number, bio, fielding_notes, photo_url, is_captain, is_vice_captain, is_wicketkeeper, joined_date, intro_video_url)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::date, CURRENT_DATE),$13)
 		 RETURNING `+playerColumns,
 		name, role, nullify(c.PostForm("batting_style")), nullify(c.PostForm("bowling_style")),
 		jerseyNumber, nullify(c.PostForm("bio")), nullify(c.PostForm("fielding_notes")), nullify(photoURL),
-		isCaptain, isVice, isKeeper, joinedParam,
+		isCaptain, isVice, isKeeper, joinedParam, nullify(videoURL),
 	)
 	player, err := scanPlayerRow(row)
 	if err != nil {
@@ -319,6 +338,13 @@ func (s *Server) UpdatePlayer(c *gin.Context) {
 	} else if ok {
 		photoURL = uploaded
 	}
+	videoURL := c.PostForm("existing_intro_video_url")
+	if uploaded, ok, videoErr := saveUploadedVideo(c, s, "intro_video"); videoErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": videoErr.Error()})
+		return
+	} else if ok {
+		videoURL = uploaded
+	}
 
 	var joinedParam interface{}
 	if v := c.PostForm("joined_date"); v != "" {
@@ -327,12 +353,12 @@ func (s *Server) UpdatePlayer(c *gin.Context) {
 
 	row := s.DB.QueryRow(
 		`UPDATE players SET name=$1, role=$2, batting_style=$3, bowling_style=$4, jersey_number=$5,
-		 bio=$6, fielding_notes=$7, photo_url=$8, is_captain=$9, is_vice_captain=$10, is_wicketkeeper=$11, joined_date=COALESCE($12::date, joined_date)
+		 bio=$6, fielding_notes=$7, photo_url=$8, is_captain=$9, is_vice_captain=$10, is_wicketkeeper=$11, joined_date=COALESCE($12::date, joined_date), intro_video_url=$14
 		 WHERE id=$13
 		 RETURNING `+playerColumns,
 		name, role, nullify(c.PostForm("batting_style")), nullify(c.PostForm("bowling_style")),
 		jerseyNumber, nullify(c.PostForm("bio")), nullify(c.PostForm("fielding_notes")), nullify(photoURL),
-		isCaptain, isVice, isKeeper, joinedParam, id,
+		isCaptain, isVice, isKeeper, joinedParam, id, nullify(videoURL),
 	)
 	player, err := scanPlayerRow(row)
 	if err == sql.ErrNoRows {

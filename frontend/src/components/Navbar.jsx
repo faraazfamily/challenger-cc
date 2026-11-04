@@ -12,7 +12,7 @@ export default function Navbar() {
     <header className="navbar">
       <div className="container">
         <Link to="/" className="brand" onClick={() => setOpen(false)}>
-          <img className="crest-logo" src="/jersey-logo.png" alt="Chaillengers crest" />
+          <img className="crest-logo" src="/crest.png" alt="The Challengers crest" />
           The Challengers
         </Link>
         <button className="nav-toggle" type="button" aria-label="Menu" onClick={() => setOpen((v) => !v)}>

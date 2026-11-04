@@ -55,6 +55,8 @@ export default function AdminPlayers() {
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState('');
   const photoInput = useRef(null);
+  const [clip, setClip] = useState(null);
+  const clipInput = useRef(null);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
@@ -70,6 +72,7 @@ export default function AdminPlayers() {
     setForm(BLANK);
     setPhoto(null);
     setPreview('');
+    setClip(null);
     setError('');
     setOpen(true);
   }
@@ -80,9 +83,10 @@ export default function AdminPlayers() {
       name: p.name, role: p.role, batting_style: p.batting_style || '', bowling_style: p.bowling_style || '',
       jersey_number: p.jersey_number || '', bio: p.bio || '', fielding_notes: p.fielding_notes || '',
       is_captain: p.is_captain, is_vice_captain: p.is_vice_captain, is_wicketkeeper: !!p.is_wicketkeeper,
-      existing_photo_url: p.photo_url,
+      existing_photo_url: p.photo_url, existing_intro_video_url: p.intro_video_url || '',
     });
     setPhoto(null);
+    setClip(null);
     setPreview(assetUrl(p.photo_url) || '');
     setError('');
     setOpen(true);
@@ -101,12 +105,19 @@ export default function AdminPlayers() {
     if (photoInput.current) photoInput.current.value = '';
   }
 
+  function removeClip() {
+    setClip(null);
+    setForm((f) => ({ ...f, existing_intro_video_url: '' }));
+    if (clipInput.current) clipInput.current.value = '';
+  }
+
   function closeModal() {
     setOpen(false);
     setEditingId(null);
     setForm(BLANK);
     setPhoto(null);
     setPreview('');
+    setClip(null);
     setError('');
   }
 
@@ -119,6 +130,7 @@ export default function AdminPlayers() {
       fd.append(k, v);
     });
     if (photo) fd.append('photo', photo);
+    if (clip) fd.append('intro_video', clip);
     try {
       if (editingId) await api.updatePlayer(editingId, fd);
       else await api.createPlayer(fd);
@@ -245,6 +257,21 @@ export default function AdminPlayers() {
                   )}
                   <p>{photo ? photo.name : 'Optional. Any common photo format.'}</p>
                   <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => choosePhoto(e.target.files?.[0])} />
+                </div>
+              </div>
+              <div className="photo-picker clip-picker">
+                <div className="photo-preview">
+                  {clip || form.existing_intro_video_url ? <span title="Intro clip">▶</span> : <span>–</span>}
+                </div>
+                <div>
+                  <button className="btn btn-secondary btn-sm" type="button" onClick={() => clipInput.current?.click()}>Choose intro clip</button>
+                  {(clip || form.existing_intro_video_url) && (
+                    <button className="btn btn-secondary btn-sm" type="button" onClick={removeClip}>Remove clip</button>
+                  )}
+                  <p>
+                    {clip ? clip.name : form.existing_intro_video_url ? 'Intro clip added.' : 'Optional. A 3-5 second MP4 (max 15 MB) of the player walking in and folding their arms. It plays once on their profile.'}
+                  </p>
+                  <input ref={clipInput} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.webm,.mov" hidden onChange={(e) => setClip(e.target.files?.[0] || null)} />
                 </div>
               </div>
               {error && <div className="error-text">{error}</div>}

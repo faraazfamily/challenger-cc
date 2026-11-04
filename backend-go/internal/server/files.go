@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 const (
 	maxImageBytes = 5 << 20  // player photos / team logo
 	maxPDFBytes   = 10 << 20 // scorecard PDFs
+	maxVideoBytes = 15 << 20 // player intro clips (a few seconds of MP4)
 )
 
 // Uploaded files are stored inside Postgres (table "files") instead of on disk.
@@ -90,6 +92,34 @@ func (s *Server) storePDF(data []byte) (string, error) {
 	return s.storeFile(".pdf", "application/pdf", data)
 }
 
+// videoExtTypes are the clip formats a phone or an AI video tool exports.
+var videoExtTypes = map[string]string{".mp4": "video/mp4", ".m4v": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime"}
+
+// storeVideo saves a short player intro clip (the "walks in and folds arms" moment).
+func (s *Server) storeVideo(fh *multipart.FileHeader) (string, error) {
+	if fh.Size > maxVideoBytes {
+		return "", fmt.Errorf("clip is too large (max %d MB): keep it to a few seconds", maxVideoBytes>>20)
+	}
+	ext := strings.ToLower(filepath.Ext(fh.Filename))
+	contentType, ok := videoExtTypes[ext]
+	if !ok {
+		return "", errors.New("the intro clip must be an MP4, WebM or MOV video")
+	}
+	f, err := fh.Open()
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, maxVideoBytes+1))
+	if err != nil {
+		return "", err
+	}
+	if len(data) > maxVideoBytes {
+		return "", fmt.Errorf("clip is too large (max %d MB): keep it to a few seconds", maxVideoBytes>>20)
+	}
+	return s.storeFile(ext, contentType, data)
+}
+
 // ServeUpload handles GET /uploads/:name.
 func (s *Server) ServeUpload(c *gin.Context) {
 	name := filepath.Base(c.Param("name"))
@@ -100,7 +130,9 @@ func (s *Server) ServeUpload(c *gin.Context) {
 	if err == nil {
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
 		c.Header("X-Content-Type-Options", "nosniff")
-		c.Data(http.StatusOK, contentType, data)
+		c.Header("Content-Type", contentType)
+		// ServeContent answers Range requests, which iPhone Safari needs to play a video.
+		http.ServeContent(c.Writer, c.Request, name, time.Time{}, bytes.NewReader(data))
 		return
 	}
 	if !errors.Is(err, sql.ErrNoRows) {

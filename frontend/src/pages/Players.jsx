@@ -15,7 +15,7 @@ export default function Players() {
 
   return (
     <div className="container section">
-      <h2>Squad</h2>
+      <h2 data-reveal>Squad</h2>
       <div className="stat-tabs">
         {roles.map((r) => (
           <div key={r} className={`stat-tab ${filter === r ? 'active' : ''}`} onClick={() => setFilter(r)}>{r}</div>

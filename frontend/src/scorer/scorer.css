@@ -247,6 +247,30 @@
 .sc-filters select { max-width: 45%; }
 
 @media (max-width: 720px) {
+  /* ---- phone scoring screen: everything above the keys fits one screen ---- */
+  .sc-topbar { margin-bottom: 8px; }
+  .sc-board { padding: 12px 14px; border-radius: 12px; margin-bottom: 10px; }
+  .sc-teams { font-size: 0.95rem; margin: 6px 0 0; }
+  .sc-situation { margin-top: 8px; padding: 6px 10px; font-size: 0.88rem; }
+  .sc-crease { padding: 0 0 8px; margin-bottom: 10px; }
+  .sc-crease th, .sc-crease td { padding: 6px 8px; }
+  .sc-chips { padding: 8px 10px 0; }
+  .sc-chip { min-width: 30px; height: 30px; }
+  .sc-boxes { padding: 10px 12px; margin-bottom: 10px; }
+  .sc-boxrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .sc-boxrow + .sc-boxrow { display: flex; margin-top: 8px; }
+  .sc-box { min-width: 0; gap: 4px; font-size: 0.88rem; white-space: nowrap; }
+  .sc-box input { flex: none; }
+  .sc-utils { padding: 8px; gap: 6px; }
+  .sc-utils .btn { padding: 7px 6px; }
+  /* KDM-style: the run keys stay fixed at the bottom while a ball can be scored */
+  .sc-wrap.playing { padding-bottom: 140px; }
+  .sc-wrap.playing .sc-runkey { width: 52px; height: 52px; }
+  .sc-wrap.playing .sc-runs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0;
+    border-radius: 16px 16px 0 0; border: none; gap: 8px; padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.35);
+  }
   .sc-card-view .sc-sb { min-width: 0; }
   .sc-sb td, .sc-sb th { padding: 8px 6px; font-size: 0.85rem; }
   .sc-padgrid { grid-template-columns: 1fr; }
