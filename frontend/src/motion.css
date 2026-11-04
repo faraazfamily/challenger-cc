@@ -217,6 +217,77 @@ html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-sprin
 .lb-rank.r3 { background: linear-gradient(135deg, #f3c6a0, #c7814a); color: #4a2a10; }
 .lb-top td { font-weight: 700; }
 
+/* ---------- admin panel ---------- */
+.admin-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.admin-head h2 { margin-bottom: 4px; }
+.admin-hello { margin: 0 0 18px; color: #9fb3cc; animation: reveal-up 0.5s var(--ease-out) 0.15s backwards; }
+.admin-hello strong { color: var(--gold-light); }
+.admin-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+.admin-tile {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px 16px;
+  border-radius: 14px; border: 1px solid rgba(59,182,220,0.3); cursor: pointer; text-align: left; font: inherit; color: #e7eef8;
+  background: linear-gradient(160deg, rgba(30,42,74,0.9), rgba(18,20,28,0.9));
+  transition: transform 0.2s var(--ease-out), border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: reveal-up 0.55s var(--ease-out) calc(0.1s + var(--i) * 0.07s) backwards;
+}
+.admin-tile:hover { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 12px 26px rgba(59,182,220,0.22); }
+.admin-tile:active { transform: scale(0.98); }
+.admin-tile-icon { font-size: 1.3rem; }
+.admin-tile strong { font-size: 1.8rem; line-height: 1.1; color: var(--gold-light); }
+.admin-tile > span:not(.admin-tile-icon) { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: #9fb3cc; }
+.admin-tile em { position: absolute; top: 12px; right: 12px; font-style: normal; font-size: 0.72rem; font-weight: 700; color: #8fe0a8; }
+.admin-tile em.admin-live-dot { color: #ff8a8a; display: flex; align-items: center; gap: 5px; }
+.admin-live-dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; animation: live-pulse 1.4s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(255,90,90,0.7); } 100% { box-shadow: 0 0 0 9px rgba(255,90,90,0); } }
+.admin-tabs .stat-tab { display: inline-flex; align-items: center; gap: 6px; }
+.admin-tab-icon { font-size: 1rem; line-height: 1; }
+.admin-pane { animation: pane-in 0.4s var(--ease-out) backwards; }
+@keyframes pane-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* squad list rows */
+.squad-row { transition: background 0.2s ease; }
+.squad-row:hover { background: #f4fafd; }
+.squad-avatar, .squad-avatar.player-photo-placeholder {
+  flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); font-size: 0.85rem;
+}
+.squad-clip { font-size: 0.95rem; }
+.squad-actions .btn { transition: transform 0.15s ease, box-shadow 0.2s ease; }
+
+/* on/off switch (match counted in records) */
+.switch {
+  display: inline-flex; align-items: center; gap: 8px; padding: 0; border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 0.82rem; font-weight: 700; color: #6b7280;
+}
+.switch::before {
+  content: ''; width: 38px; height: 22px; border-radius: 11px; background: #cbd5e1; transition: background 0.25s ease; flex: none;
+}
+.switch { position: relative; }
+.switch-knob {
+  position: absolute; left: 3px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.25s var(--ease-spring);
+}
+.switch.on::before { background: var(--gold); }
+.switch.on .switch-knob { transform: translateX(16px); }
+.switch.on { color: var(--gold-ink); }
+
+/* tournaments */
+.tournament-card { animation: none; transition: transform 0.25s var(--ease-out), box-shadow 0.25s ease, border-color 0.25s ease; }
+.tournament-card:hover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(59,182,220,0.2); border-color: var(--gold); }
+
+/* forms and modals across the admin */
+.form-group input, .form-group select, .form-group textarea { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(59,182,220,0.22);
+}
+.modal-backdrop { animation: backdrop-in 0.25s ease backwards; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.modal-card { animation: modal-in 0.35s var(--ease-spring) backwards; }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
+.upload-panel { transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
+.upload-panel.hot { box-shadow: 0 0 0 4px rgba(59,182,220,0.2); animation: hot-pulse 1.2s ease-in-out infinite; }
+@keyframes hot-pulse { 50% { box-shadow: 0 0 0 8px rgba(59,182,220,0.08); } }
+.review-note { animation: reveal-up 0.45s var(--ease-out) backwards; }
+
 /* ---------- mobile menu ---------- */
 @media (max-width: 900px) {
   .navbar nav.open { animation: menu-down 0.25s var(--ease-out); }
@@ -229,6 +300,22 @@ html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-sprin
   .navbar nav a::after { display: none; }
 }
 @media (max-width: 720px) {
+  .admin-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  /* admin match list: one card per match on phones */
+  .admin-match-table thead { display: none; }
+  .admin-match-table tr {
+    display: grid; grid-template-columns: 1fr auto; column-gap: 10px; row-gap: 6px; align-items: center;
+    grid-template-areas: "opp res" "score score" "date date" "rec del"; padding: 12px 14px; border-bottom: 1px solid #eee;
+  }
+  .admin-match-table td { padding: 0; border: none; white-space: normal; }
+  .admin-match-table .am-opp { grid-area: opp; font-size: 1rem; }
+  .admin-match-table .am-res { grid-area: res; text-align: right; }
+  .admin-match-table .am-score { grid-area: score; font-weight: 600; }
+  .admin-match-table .am-date { grid-area: date; color: var(--text-muted); font-size: 0.8rem; }
+  .admin-match-table .am-rec { grid-area: rec; }
+  .admin-match-table .am-del { grid-area: del; text-align: right; }
+  .admin-tile { padding: 12px; }
+  .admin-tile strong { font-size: 1.5rem; }
   .stage { grid-template-columns: 1fr; text-align: center; padding: 24px 16px; gap: 6px; }
   .stage-figure { height: 210px; }
   .stage-clip { max-width: 240px; margin: 0 auto; }

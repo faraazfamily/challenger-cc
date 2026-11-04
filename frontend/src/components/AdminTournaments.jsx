@@ -124,7 +124,7 @@ export default function AdminTournaments() {
       ) : (
         <div className="tournament-grid">
           {filtered.map((t) => (
-            <div className="card tournament-card" key={t.id}>
+            <div className="card tournament-card" key={t.id} data-reveal>
               <h3>{t.name}</h3>
               <div style={{ color: '#0b6e8c', fontWeight: 700, marginBottom: 8 }}>{t.year || 'Year not set'}</div>
               <div style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 14 }}>

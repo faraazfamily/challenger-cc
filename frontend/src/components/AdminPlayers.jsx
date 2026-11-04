@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, assetUrl } from '../api';
 import { prepareIntroVideo } from './introVideo';
+import { PlayerAvatar } from './PlayerCard';
 
 const BLANK = { name: '', role: 'Batsman', batting_style: '', bowling_style: '', jersey_number: '', bio: '', fielding_notes: '', is_captain: false, is_vice_captain: false, is_wicketkeeper: false };
 const ROLES = ['Batsman', 'Bowler', 'All-rounder', 'Wicketkeeper'];
@@ -214,11 +215,13 @@ export default function AdminPlayers() {
       ) : (
         <div className="card squad-list">
           {filtered.map((p) => (
-            <div className="squad-row" key={p.id}>
+            <div className="squad-row" key={p.id} data-reveal>
+              <PlayerAvatar player={p} className="squad-avatar" />
               <div className="jersey-badge">{p.jersey_number ?? '—'}</div>
               <div className="squad-row-main">
                 <strong>{p.name} {p.is_captain ? '★' : ''}{p.is_vice_captain ? ' VC' : ''}{p.is_wicketkeeper ? ' WK' : ''}</strong>
                 <span className="role-tag">{p.role}</span>
+                {p.intro_video_url && <span className="squad-clip" title="Has an intro video">🎬</span>}
               </div>
               <div className="squad-actions">
                 <button className="btn btn-secondary btn-sm" type="button" onClick={() => startEdit(p)}>Edit</button>

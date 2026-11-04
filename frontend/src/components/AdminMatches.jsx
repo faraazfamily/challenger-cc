@@ -32,21 +32,23 @@ export default function AdminMatches() {
         <div className="empty-state">No matches yet.</div>
       ) : (
         <div className="card">
-          <table>
+          <table className="admin-match-table">
             <thead><tr><th>Date</th><th>Opponent</th><th>Score</th><th>Result</th><th>In records</th><th></th></tr></thead>
             <tbody>
               {matches.map((m) => (
-                <tr key={m.id}>
-                  <td>{new Date(m.match_date).toLocaleDateString()}</td>
-                  <td>{m.opponent}</td>
-                  <td>{m.our_score || '—'} vs {m.opponent_score || '—'}</td>
-                  <td>{m.result}</td>
-                  <td>
-                    <button className={`btn btn-sm ${m.in_records ? 'btn-primary' : 'btn-secondary'}`} onClick={() => toggleRecords(m)}>
-                      {m.in_records ? 'Counted ✓' : 'Not counted'}
+                <tr key={m.id} data-reveal>
+                  <td className="am-date">{new Date(m.match_date).toLocaleDateString()}</td>
+                  <td className="am-opp"><strong>{m.opponent}</strong></td>
+                  <td className="am-score">{m.our_score || '—'} vs {m.opponent_score || '—'}</td>
+                  <td className="am-res"><span className={`badge ${m.result === 'Won' ? 'badge-won' : m.result === 'Lost' ? 'badge-lost' : 'badge-upcoming'}`}>{m.result}</span></td>
+                  <td className="am-rec">
+                    {/* switch: counted in player stats / leaderboard or not */}
+                    <button type="button" role="switch" aria-checked={!!m.in_records} className={`switch ${m.in_records ? 'on' : ''}`} onClick={() => toggleRecords(m)}>
+                      <span className="switch-knob" />
+                      <span className="switch-label">{m.in_records ? 'Counted' : 'Not counted'}</span>
                     </button>
                   </td>
-                  <td><button className="btn btn-danger btn-sm" onClick={() => handleDelete(m.id)}>Delete</button></td>
+                  <td className="am-del"><button className="btn btn-danger btn-sm" onClick={() => handleDelete(m.id)}>Delete</button></td>
                 </tr>
               ))}
             </tbody>

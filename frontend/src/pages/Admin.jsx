@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { isLoggedIn } from '../api';
+import { api, isLoggedIn } from '../api';
+import { CountUp } from '../motion';
 import AdminPlayers from '../components/AdminPlayers';
 import AdminMatches from '../components/AdminMatches';
 import AdminTournaments from '../components/AdminTournaments';
@@ -8,7 +9,53 @@ import AdminScorecard from '../components/AdminScorecard';
 import AdminScorer from '../scorer/AdminScorer';
 
 const TABS = ['Players', 'Matches', 'Scorer', 'Tournaments', 'Upload Scorecard'];
+const ICONS = { Players: '👥', Matches: '🏏', Scorer: '📋', Tournaments: '🏆', 'Upload Scorecard': '📄' };
 const slug = (t) => t.toLowerCase().replace(/ /g, '-');
+
+// Username from the login token, for the greeting (display only; the server checks the token).
+function adminName() {
+  try {
+    const token = localStorage.getItem('cc_token') || '';
+    return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).username || 'admin';
+  } catch {
+    return 'admin';
+  }
+}
+
+// Club at a glance: each tile counts up and opens its tab.
+function Summary({ setTab }) {
+  const [n, setN] = useState({});
+  useEffect(() => {
+    const put = (k) => (v) => setN((o) => ({ ...o, [k]: v }));
+    api.getPlayers().then((p) => put('players')(p.length)).catch(() => {});
+    api.getMatches().then((m) => {
+      put('matches')(m.length);
+      put('won')(m.filter((x) => x.result === 'Won').length);
+    }).catch(() => {});
+    api.getTournaments().then((t) => put('tournaments')(t.length)).catch(() => {});
+    api.scorerList().then((l) => put('live')(l.length)).catch(() => {});
+  }, []);
+  const tiles = [
+    ['Players', 'players', 'Squad players'],
+    ['Matches', 'matches', n.matches != null ? `${n.won ?? 0} won` : 'Matches'],
+    ['Tournaments', 'tournaments', 'Tournaments'],
+    ['Scorer', 'live', 'Being scored'],
+  ];
+  return (
+    <div className="admin-summary">
+      {tiles.map(([tab, key, label], i) => (
+        <button key={key} type="button" className={`admin-tile ${key === 'live' && n.live ? 'is-live' : ''}`}
+          style={{ '--i': i }} onClick={() => setTab(tab)}>
+          <span className="admin-tile-icon" aria-hidden="true">{ICONS[tab]}</span>
+          <strong>{n[key] == null ? '–' : <CountUp value={n[key]} />}</strong>
+          <span>{key === 'matches' ? 'Matches' : label}</span>
+          {key === 'matches' && n.matches != null && <em>{label}</em>}
+          {key === 'live' && n.live > 0 && <em className="admin-live-dot">live now</em>}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function Admin() {
   // The open tab lives in the URL (/admin?tab=scorer), so a refresh stays on it.
@@ -39,22 +86,31 @@ export default function Admin() {
     <div className="container section">
       {!focus && (
       <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Admin Panel</h2>
+      <div className="admin-head">
+        <div>
+          <h2>Admin Panel</h2>
+          <p className="admin-hello">Welcome back, <strong>{adminName()}</strong></p>
+        </div>
         <button className="btn btn-secondary btn-sm" onClick={logout}>Log Out</button>
       </div>
+      <Summary setTab={setTab} />
       <div className="stat-tabs admin-tabs">
         {TABS.map((t) => (
-          <button key={t} type="button" className={`stat-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+          <button key={t} type="button" className={`stat-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+            <span className="admin-tab-icon" aria-hidden="true">{ICONS[t]}</span>{t}
+          </button>
         ))}
       </div>
       </>
       )}
-      {tab === 'Players' && <AdminPlayers />}
-      {tab === 'Matches' && <AdminMatches />}
-      {tab === 'Scorer' && <AdminScorer />}
-      {tab === 'Tournaments' && <AdminTournaments />}
-      {tab === 'Upload Scorecard' && <AdminScorecard />}
+      {/* keyed by tab only (not focus), so the scorer keeps its state when a match opens */}
+      <div className="admin-pane" key={tab}>
+        {tab === 'Players' && <AdminPlayers />}
+        {tab === 'Matches' && <AdminMatches />}
+        {tab === 'Scorer' && <AdminScorer />}
+        {tab === 'Tournaments' && <AdminTournaments />}
+        {tab === 'Upload Scorecard' && <AdminScorecard />}
+      </div>
     </div>
   );
 }
