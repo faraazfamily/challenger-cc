@@ -21,7 +21,11 @@ export default function Home() {
     <div>
       <div className="hero">
         <div className="container">
-          <img className="hero-logo" src="/crest.png" alt="The Challengers crest" />
+          <div className="hero-crest">
+            <span className="hero-halo" aria-hidden="true" />
+            <img className="hero-logo" src="/crest.png" alt="The Challengers crest" />
+            <span className="hero-shine" aria-hidden="true" />
+          </div>
           <h1 className="hero-title">{team?.name || 'The Challengers'}</h1>
           <p className="hero-tagline">{team?.tagline || 'Play Hard. Play Fair. Challenge Everything.'}</p>
         </div>

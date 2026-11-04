@@ -58,8 +58,30 @@ html.motion .section h2[data-reveal].in::before { animation: bar-grow 0.5s var(-
 }
 @keyframes sweep { from { transform: translateX(-35%); } to { transform: translateX(35%); } }
 .hero .container { position: relative; }
-.hero-logo { animation: crest-drop 0.9s var(--ease-spring) backwards, floaty 4s ease-in-out 0.9s infinite; }
-@keyframes crest-drop { from { opacity: 0; transform: translateY(-40px) scale(0.6) rotate(-10deg); } to { opacity: 1; transform: none; } }
+/* crest: fades in out of a soft blur, then gently "breathes" with a pulsing glow behind it
+   and a light glint that sweeps across the logo every few seconds */
+.hero-crest {
+  position: relative; display: inline-block; margin-bottom: 8px;
+  /* the whole crest (logo, glow, glint) moves together */
+  animation: crest-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) backwards, crest-breathe 6s ease-in-out 1.4s infinite;
+}
+.hero-crest .hero-logo { position: relative; z-index: 1; display: block; margin: 0; animation: none; }
+.hero-halo {
+  position: absolute; inset: 6%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(59,182,220,0.55), rgba(59,182,220,0.15) 60%, transparent 75%);
+  filter: blur(12px); animation: halo-pulse 6s ease-in-out 1.4s infinite;
+}
+.hero-shine {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.6) 50%, transparent 60%) no-repeat;
+  background-size: 260% 100%; background-position: 160% 0;
+  -webkit-mask: url(/crest.png) center / contain no-repeat; mask: url(/crest.png) center / contain no-repeat;
+  animation: crest-shine 6s ease-in-out 1.8s infinite;
+}
+@keyframes crest-in { from { opacity: 0; transform: scale(0.85); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes crest-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.025); } }
+@keyframes halo-pulse { 0%, 100% { opacity: 0.55; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes crest-shine { 0% { background-position: 160% 0; } 35%, 100% { background-position: -60% 0; } }
 .hero-title { animation: title-in 0.8s var(--ease-out) 0.25s backwards; letter-spacing: 0.5px; }
 @keyframes title-in { from { opacity: 0; letter-spacing: 6px; filter: blur(6px); } to { opacity: 1; } }
 .hero-tagline { animation: reveal-up 0.7s var(--ease-out) 0.5s backwards; }
