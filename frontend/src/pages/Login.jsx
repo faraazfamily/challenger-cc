@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 
 export default function Login() {
@@ -7,6 +7,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const expired = useSearchParams()[0].get('expired') === '1';
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -24,6 +25,7 @@ export default function Login() {
     <div className="container">
       <form className="card login-box" onSubmit={handleSubmit}>
         <h2>Admin Login</h2>
+        {expired && <div className="review-note">Your login expired. Please log in again.</div>}
         <div className="form-group">
           <label>Username</label>
           <input value={username} onChange={(e) => setUsername(e.target.value)} required />

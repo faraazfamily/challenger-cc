@@ -94,6 +94,7 @@ export default function ScorerSetup({ onStart, onCancel }) {
   const [tournaments, setTournaments] = useState([]);
   const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     api.getPlayers().then(setSquad).catch(() => {});
@@ -116,8 +117,9 @@ export default function ScorerSetup({ onStart, onCancel }) {
   const two = cfg.inningsPerSide === 2;
   const label = (i) => teams[i].name.trim() || (i === 0 ? 'Host Team' : 'Visitor Team');
 
-  function start(e) {
+  async function start(e) {
     e.preventDefault();
+    if (busy) return;
     const names = teams.map((t) => t.name.trim());
     if (!names[0] || !names[1]) return setError('Give both teams a name.');
     if (names[0].toLowerCase() === names[1].toLowerCase()) return setError('The two teams need different names.');
@@ -129,11 +131,19 @@ export default function ScorerSetup({ onStart, onCancel }) {
       toss: { winner: Number(tossWinner), elected },
       meta: { date, venue: venue.trim(), tournamentId: tournamentId || null, ourSide: Number(ourSide) },
     });
-    onStart(match);
+    setError('');
+    setBusy(true);
+    try {
+      await onStart(match);
+    } catch (err) {
+      setError(`Could not start the match: ${err.message}`);
+      setBusy(false);
+    }
   }
 
   return (
     <form onSubmit={start} className="sc-quick">
+      <h3>New match</h3>
       <div className="sc-qlabel">Teams</div>
       <div className="card sc-panel">
         <div className="form-group"><input value={teams[0].name} onChange={(e) => setName(0, e.target.value)} placeholder="Host Team" /></div>
@@ -159,7 +169,7 @@ export default function ScorerSetup({ onStart, onCancel }) {
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       <div className="sc-qactions">
         <button type="button" className="sc-linkbtn" onClick={() => setAdvanced(!advanced)}>{advanced ? 'Hide advanced settings' : 'Advanced settings'}</button>
-        <button className="btn btn-primary" type="submit">Start match</button>
+        <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Starting...' : 'Start match'}</button>
       </div>
       <div className="sc-small" style={{ marginBottom: 16 }}>Players are added while scoring: just type their names when asked. <button type="button" className="sc-linkbtn" onClick={onCancel}>Cancel</button></div>
 

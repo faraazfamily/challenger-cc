@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { api, cached } from '../api';
 
 function badgeClass(result) {
   if (result === 'Won') return 'badge badge-won';
@@ -9,7 +9,7 @@ function badgeClass(result) {
 }
 
 export default function Matches() {
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] = useState(() => cached('/api/matches') || []);
 
   useEffect(() => { api.getMatches().then(setMatches).catch(() => {}); }, []);
 

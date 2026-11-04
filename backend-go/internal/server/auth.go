@@ -39,7 +39,7 @@ func (s *Server) Login(c *gin.Context) {
 	claims := jwt.MapClaims{
 		"admin_id": id,
 		"username": req.Username,
-		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(),
+		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(), // long enough that it rarely runs out mid-match
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(s.JWTSecret))

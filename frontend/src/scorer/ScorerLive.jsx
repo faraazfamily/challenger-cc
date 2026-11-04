@@ -104,16 +104,27 @@ export default function ScorerLive({ initial, serverId, onExit }) {
   useEffect(() => { api.getPlayers().then(setSquad).catch(() => {}); }, []);
 
   const commit = (m) => setMatch(m);
-  const push = (ev) => commit(E.addEvent(match, ev));
+  // Events build on the latest state (not this render's copy), so two quick taps both count.
+  // A ball that arrives once the innings is over or waits for a bowler / batsman is dropped.
+  const addTo = (m, ev) => {
+    if (ev.t === 'ball') {
+      const s = E.summarize(m, m.innings.length - 1);
+      if (s.complete || s.needs) return m;
+    }
+    return E.addEvent(m, ev);
+  };
+  const push = (ev) => setMatch((m) => addTo(m, ev));
   // Add any typed-in / squad players to their team first, then record the event with their pids.
   function pushWith(picks, makeEvent) {
-    let m = match;
-    const pids = picks.map(([team, pick]) => {
-      const r = E.withPlayer(m, team, pick);
-      m = r.m;
-      return r.pid;
+    setMatch((cur) => {
+      let m = cur;
+      const pids = picks.map(([team, pick]) => {
+        const r = E.withPlayer(m, team, pick);
+        m = r.m;
+        return r.pid;
+      });
+      return addTo(m, makeEvent(...pids));
     });
-    commit(E.addEvent(m, makeEvent(...pids)));
   }
 
   // KDM-style checkboxes: Wide / No Ball / Byes / Leg Byes / Wicket, then tap the runs.
@@ -295,11 +306,11 @@ export default function ScorerLive({ initial, serverId, onExit }) {
             </div>
             <div className="card sc-runs">
               {[0, 1, 2, 3, 4, 5, 6].map((n) => (
-                <button key={n} type="button" className={`sc-run ${n === 4 ? 'sc-four' : n === 6 ? 'sc-six' : ''}`}
+                <button key={n} type="button" className={`sc-runkey ${n === 4 ? 'sc-four' : n === 6 ? 'sc-six' : ''}`}
                   disabled={(noZero && n === 0) || (noSix && n === 6)}
                   onClick={() => tap(n, n === 4 || n === 6 ? n : undefined)}>{n}</button>
               ))}
-              <button type="button" className="sc-run" title="More runs" onClick={() => { setMoreRuns(7); setModal('runs'); }}>…</button>
+              <button type="button" className="sc-runkey" title="More runs" onClick={() => { setMoreRuns(7); setModal('runs'); }}>…</button>
             </div>
           </div>
         </div>
@@ -370,7 +381,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
       )}
       {view === 'score' && step.kind === 'play' && sum.needs === 'batter' && (
         <Modal title="New batsman">
-          <PlayerInput squad={freeSquad} placeholder="Type batsman name"
+          <PlayerInput alwaysOpen squad={freeSquad} placeholder="Type batsman name"
             options={sum.available.map((p) => ({ pid: p.pid, name: p.name, note: sum.batters.some((b) => b.pid === p.pid) ? 'returning' : '' }))}
             onPick={(pick) => pushWith([[sum.team, pick]], (pid) => ({ t: 'bat', pid }))} />
           <button className="btn btn-secondary" style={{ marginTop: 12 }} onClick={undo}>Undo last ball</button>
@@ -378,7 +389,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
       )}
       {view === 'score' && step.kind === 'play' && sum.needs === 'bowler' && (
         <Modal title={`Over ${Math.floor(sum.legal / (cfg.ballsPerOver || 6)) + 1}: choose bowler`}>
-          <PlayerInput squad={freeSquad} placeholder="Type bowler name" options={bowlerChoices(null)}
+          <PlayerInput alwaysOpen squad={freeSquad} placeholder="Type bowler name" options={bowlerChoices(null)}
             onPick={(pick) => pushWith([[fieldTeam, pick]], (pid) => ({ t: 'bowler', pid }))} />
           <button className="btn btn-secondary" style={{ marginTop: 12 }} onClick={undo}>Undo last ball</button>
         </Modal>
@@ -485,7 +496,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
             </div>
           )}
           {more.view === 'bowler' && (
-            <PlayerInput squad={freeSquad} placeholder="Type bowler name" options={bowlerChoices(sum.bowler).map((p) => ({ ...p, disabled: false }))}
+            <PlayerInput alwaysOpen squad={freeSquad} placeholder="Type bowler name" options={bowlerChoices(sum.bowler).map((p) => ({ ...p, disabled: false }))}
               onPick={(pick) => { pushWith([[fieldTeam, pick]], (pid) => ({ t: 'bowler', pid })); closeModal(); }} />
           )}
           {more.view === 'revise' && (

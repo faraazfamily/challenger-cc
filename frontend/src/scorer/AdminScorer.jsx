@@ -173,15 +173,12 @@ export default function AdminScorer() {
   const teams = useMemo(() => teamRecords(good), [good]);
   const players = useMemo(() => playerStats(good), [good]);
 
+  // Throws so the setup screen can show the problem (and stay filled in).
   async function start(match) {
     setError('');
-    try {
-      const r = await api.scorerCreate({ title: matchTitle(match), format: match.config.format, state: match });
-      setCurrent({ id: r.id, match });
-      setView('live');
-    } catch (e) {
-      setError(e.message);
-    }
+    const r = await api.scorerCreate({ title: matchTitle(match), format: match.config.format, state: match });
+    setCurrent({ id: r.id, match });
+    setView('live');
   }
 
   async function resume(id) {

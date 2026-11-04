@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, cached } from '../api';
 
 export default function MatchDetail() {
   const { id } = useParams();
-  const [match, setMatch] = useState(null);
+  const [match, setMatch] = useState(() => cached(`/api/matches/${id}`));
 
-  useEffect(() => { api.getMatch(id).then(setMatch).catch(() => {}); }, [id]);
+  useEffect(() => {
+    setMatch(cached(`/api/matches/${id}`));
+    api.getMatch(id).then(setMatch).catch(() => {});
+  }, [id]);
 
   if (!match) return <div className="container section empty-state">Loading...</div>;
 

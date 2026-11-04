@@ -91,6 +91,23 @@
 .sc-card-view .sc-small { padding: 0 14px 12px; }
 
 
+/* form controls inside scorer cards (inputs outside .form-group were left unstyled).
+   :is() lifts specificity above index.css's .form-group rules, whatever order the CSS loads in. */
+:is(.sc-quick, .sc-modal, .sc-filters) :is(input:not([type=radio]):not([type=checkbox]), select) {
+  width: 100%; padding: 10px 12px; border: 1px solid #d0cdc0; border-radius: 8px; font-size: 0.97rem; font-family: inherit;
+  background-color: #fff; color: var(--text-dark);
+}
+:is(.sc-quick, .sc-modal, .sc-filters) :is(input:not([type=radio]):not([type=checkbox]), select):focus {
+  outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(59,182,220,0.22);
+}
+/* one look for every select: no browser chrome, a small chevron on the right */
+:is(.sc-quick, .sc-modal, .sc-filters) :is(select, select:not([type=radio]):not([type=checkbox])) {
+  appearance: none; -webkit-appearance: none; padding-right: 34px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%230b6e8c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.sc-filters :is(input, select):is(input, select:not([type=radio]):not([type=checkbox])) { border-color: rgba(59,182,220,0.45); }
+
 /* KDM-style quick start */
 .sc-quick { max-width: 560px; margin: 0 auto; }
 .sc-qlabel { color: var(--gold-light); font-weight: 700; margin: 4px 0 6px; }
@@ -103,10 +120,21 @@
 .sc-qactions .btn { min-width: 160px; }
 .sc-linkbtn { background: none; border: none; color: var(--gold-light); font-weight: 700; cursor: pointer; padding: 4px 0; text-decoration: underline; }
 
-/* player type-or-pick box */
-.sc-pin input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #d0cdc0; margin-bottom: 8px; font-size: 1rem; }
-.sc-pin .sc-list { max-height: 260px; overflow: auto; }
-.sc-pick-new { border-style: dashed; }
+/* player type-or-pick box: compact dropdown */
+.sc-pin-box { position: relative; }
+.sc-pin-box input { width: 100%; padding: 10px 34px 10px 12px; border-radius: 8px; border: 1px solid #d0cdc0; font-size: 1rem; background: #fff; color: var(--text-dark); }
+.sc-modal .sc-pin .sc-pin-box input:not([type=radio]):not([type=checkbox]), .sc-pin .sc-pin-box input:not([type=radio]):not([type=checkbox]) { padding-right: 34px; } /* room for the caret, beats the generic rule */
+.sc-pin-box input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(59,182,220,0.22); }
+.sc-pin-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; font-size: 0.85rem; transition: transform 0.15s ease; }
+.sc-pin.open .sc-pin-caret { transform: translateY(-50%) rotate(180deg); }
+.sc-drop { margin-top: 6px; max-height: 232px; overflow-y: auto; border: 1px solid #d7e8ef; border-radius: 10px; background: #fff; box-shadow: 0 8px 20px rgba(10,20,40,0.12); }
+.sc-drop-head { position: sticky; top: 0; z-index: 1; padding: 6px 12px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--gold-ink); background: #f1f8fb; border-bottom: 1px solid #e3eef3; }
+.sc-drop-item { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: none; border-bottom: 1px solid #f0f3f6; background: #fff; color: var(--text-dark); font-size: 0.97rem; font-weight: 600; text-align: left; cursor: pointer; }
+.sc-drop-item:hover:not(:disabled), .sc-drop-item.hi { background: #e7f6fb; }
+.sc-drop-item:disabled { color: #9ca3af; cursor: not-allowed; }
+.sc-drop-item.new { color: var(--gold-ink); font-weight: 700; }
+.sc-drop-note { color: #6b7280; font-size: 0.78rem; font-weight: 500; white-space: nowrap; }
+.sc-drop-empty { padding: 12px; color: #6b7280; font-size: 0.9rem; }
 .sc-chosen { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; background: #e7f6fb; color: #1a1a1a; }
 .sc-chosen .sc-linkbtn { color: var(--gold-ink); }
 
@@ -128,15 +156,15 @@
 .sc-utils { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
 .sc-utils .btn { width: 100%; }
 .sc-runs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 14px; justify-items: center; }
-.sc-run {
+.sc-runkey {
   width: 58px; height: 58px; border-radius: 50%; font-size: 1.2rem; font-weight: 800; cursor: pointer;
   background: #fff; color: var(--gold-ink); border: 2px solid var(--gold-ink); transition: transform 0.12s ease, background 0.12s ease;
 }
-.sc-run:hover:not(:disabled) { background: #e7f6fb; }
-.sc-run:active:not(:disabled) { transform: scale(0.94); }
-.sc-run:disabled { opacity: 0.3; cursor: not-allowed; }
-.sc-run.sc-four { background: var(--gold); color: #071018; border-color: var(--gold); }
-.sc-run.sc-six { background: var(--navy-light); color: var(--gold-light); border-color: var(--navy-light); }
+.sc-runkey:hover:not(:disabled) { background: #e7f6fb; }
+.sc-runkey:active:not(:disabled) { transform: scale(0.94); }
+.sc-runkey:disabled { opacity: 0.3; cursor: not-allowed; }
+.sc-runkey.sc-four { background: var(--gold); color: #071018; border-color: var(--gold); }
+.sc-runkey.sc-six { background: var(--navy-light); color: var(--gold-light); border-color: var(--navy-light); }
 .sc-mtable { min-width: 0; width: 100%; }
 
 
@@ -194,7 +222,10 @@
 .sc-stats th:first-child { background: #dcecf3; }
 .sc-clickrow { cursor: pointer; }
 .sc-clickrow:hover td { background: #f7fafc; }
-.sc-stattabs { border-radius: 10px 10px 0 0; overflow: hidden; }
+/* second-level tabs (Batting / Bowling / Fielding): pills, so they don't look like the main tabs */
+.sc-stattabs { background: none; gap: 8px; }
+.sc-stattabs button { flex: 0 1 auto; padding: 7px 18px; border: 1px solid rgba(59,182,220,0.45); border-radius: 20px; background: #1a2333; color: #c9d3e8; text-transform: none; letter-spacing: 0; font-weight: 700; }
+.sc-stattabs button.on { background: var(--gold); border-color: var(--gold); color: #071018; }
 .sc-filters { display: flex; gap: 8px; margin: 10px 0; }
 .sc-filters input { flex: 1; min-width: 0; }
 .sc-filters select { max-width: 45%; }
@@ -205,7 +236,7 @@
   .sc-padgrid { grid-template-columns: 1fr; }
   .sc-utils { flex-direction: row; flex-wrap: wrap; }
   .sc-utils .btn { width: auto; flex: 1; }
-  .sc-run { width: 54px; height: 54px; }
+  .sc-runkey { width: 54px; height: 54px; }
   .sc-boxbtns { margin-left: 0; }
   .sc-two { grid-template-columns: 1fr; }
   .sc-score { font-size: 2.5rem; }

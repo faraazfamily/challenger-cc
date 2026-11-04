@@ -14,7 +14,8 @@ export default function Admin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoggedIn()) navigate('/login');
+    // A token that is there but no longer valid means the login ran out.
+    if (!isLoggedIn()) navigate(localStorage.getItem('cc_token') ? '/login?expired=1' : '/login');
   }, [navigate]);
 
   function logout() {

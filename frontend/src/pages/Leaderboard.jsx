@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { api, cached } from '../api';
 
 const TABS = [
   { key: 'mostRuns', label: 'Most Runs', cols: [['runs', 'Runs'], ['innings', 'Innings']] },
@@ -10,7 +10,7 @@ const TABS = [
 ];
 
 export default function Leaderboard() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => cached('/api/stats/leaderboard'));
   const [tab, setTab] = useState('mostRuns');
 
   useEffect(() => { api.getLeaderboard().then(setData).catch(() => { }); }, []);

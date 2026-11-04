@@ -128,15 +128,16 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS in_records BOOLEAN NOT NULL DEFAULT
 -- ===== Scorer (KDM-style ball-by-ball scoring) =====
 -- The match being scored (whole match as JSON, saved after every ball). Finished matches stay
 -- here too: they make up the scorer's History, Teams and Players screens.
-CREATE TABLE IF NOT EXISTS live_matches (
+-- (Not "live_matches": an older, reverted live scorer left a table with that name and a
+-- different shape in some databases, which CREATE TABLE IF NOT EXISTS would silently keep.)
+CREATE TABLE IF NOT EXISTS scorer_matches (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL DEFAULT '',
     format TEXT NOT NULL DEFAULT '',
     state JSONB NOT NULL,
     status TEXT NOT NULL DEFAULT 'live' CHECK (status IN ('live','finished')),
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
     match_id INT REFERENCES matches(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
--- Archived matches are hidden from History and left out of the scorer's team / player stats.
-ALTER TABLE live_matches ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, cached } from '../api';
 import { PlayerAvatar } from '../components/PlayerCard';
 
 export default function PlayerProfile() {
   const { id } = useParams();
-  const [player, setPlayer] = useState(null);
+  const [player, setPlayer] = useState(() => cached(`/api/players/${id}`));
   const [error, setError] = useState('');
 
   useEffect(() => {
+    setPlayer(cached(`/api/players/${id}`));
     api.getPlayer(id).then(setPlayer).catch((e) => setError(e.message));
   }, [id]);
 

@@ -12,10 +12,38 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// The admin token lasts a fixed time (see backend auth.go). When the server says it is no
+// longer valid, drop it and send the admin to the login page instead of showing raw errors.
+const TOKEN_ERRORS = new Set(['Invalid or expired token', 'Missing or invalid Authorization header']);
+
 async function handle(res) {
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && TOKEN_ERRORS.has(data.error) && localStorage.getItem('cc_token')) {
+    localStorage.removeItem('cc_token');
+    if (!window.location.pathname.startsWith('/login')) window.location.assign('/login?expired=1');
+    throw new Error('Your login has expired. Please log in again.');
+  }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
+}
+
+// Public pages keep the last answer of each GET in localStorage. They paint that straight away
+// and swap in the fresh answer when it arrives, so a slow (cold) server never shows an empty page.
+const CACHE = 'cc_cache:';
+
+export function cached(path) {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE + path));
+  } catch {
+    return null;
+  }
+}
+
+function getCached(path) {
+  return fetch(`${BASE}${path}`, { headers: authHeaders() }).then(handle).then((data) => {
+    try { localStorage.setItem(CACHE + path, JSON.stringify(data)); } catch { /* storage full: just skip the cache */ }
+    return data;
+  });
 }
 
 export const api = {
@@ -35,13 +63,13 @@ export const api = {
     }).then(handle),
 
   // Team
-  getTeam: () => fetch(`${BASE}/api/team`, { headers: authHeaders() }).then(handle),
+  getTeam: () => getCached('/api/team'),
   updateTeam: (formData) =>
     fetch(`${BASE}/api/team`, { method: 'PUT', headers: { ...authHeaders() }, body: formData }).then(handle),
 
   // Players
-  getPlayers: () => fetch(`${BASE}/api/players`, { headers: authHeaders() }).then(handle),
-  getPlayer: (id) => fetch(`${BASE}/api/players/${id}`, { headers: authHeaders() }).then(handle),
+  getPlayers: () => getCached('/api/players'),
+  getPlayer: (id) => getCached(`/api/players/${id}`),
   createPlayer: (formData) =>
     fetch(`${BASE}/api/players`, { method: 'POST', headers: { ...authHeaders() }, body: formData }).then(handle),
   updatePlayer: (id, formData) =>
@@ -102,8 +130,8 @@ export const api = {
     fetch(`${BASE}/api/tournaments/${id}`, { method: 'DELETE', headers: { ...authHeaders() } }).then(handle),
 
   // Matches
-  getMatches: () => fetch(`${BASE}/api/matches`, { headers: authHeaders() }).then(handle),
-  getMatch: (id) => fetch(`${BASE}/api/matches/${id}`, { headers: authHeaders() }).then(handle),
+  getMatches: () => getCached('/api/matches'),
+  getMatch: (id) => getCached(`/api/matches/${id}`),
   createMatch: (payload) =>
     fetch(`${BASE}/api/matches`, {
       method: 'POST',
@@ -132,10 +160,17 @@ export const api = {
     fetch(`${BASE}/api/scorecards/${matchId}/upload`, { method: 'POST', headers: { ...authHeaders() }, body: formData }).then(handle),
 
   // Stats
-  getLeaderboard: () => fetch(`${BASE}/api/stats/leaderboard`, { headers: authHeaders() }).then(handle),
-  getTeamRecord: () => fetch(`${BASE}/api/stats/team-record`, { headers: authHeaders() }).then(handle),
+  getLeaderboard: () => getCached('/api/stats/leaderboard'),
+  getTeamRecord: () => getCached('/api/stats/team-record'),
 };
 
+// Reads the expiry inside the token, so an expired login goes to the login page right away.
 export function isLoggedIn() {
-  return !!localStorage.getItem('cc_token');
+  const token = localStorage.getItem('cc_token');
+  if (!token) return false;
+  try {
+    const { exp } = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (exp && exp * 1000 <= Date.now()) return false;
+  } catch { /* not a JWT we can read: let the server decide */ }
+  return true;
 }

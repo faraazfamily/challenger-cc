@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, cached } from '../api';
 import PlayerCard from '../components/PlayerCard';
 
 export default function Players() {
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState(() => cached('/api/players') || []);
   const [filter, setFilter] = useState('All');
 
   useEffect(() => { api.getPlayers().then(setPlayers).catch(() => {}); }, []);

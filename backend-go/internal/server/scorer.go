@@ -13,7 +13,7 @@ import (
 
 // ---------------------------------------------------------------------------
 // Live scorer. The whole match (teams, every ball) is one JSON document kept in
-// live_matches, so a half-scored match survives refreshes and can be resumed
+// scorer_matches, so a half-scored match survives refreshes and can be resumed
 // from any phone. When the match is over, /finish turns it into a normal row in
 // matches + batting_stats + bowling_stats, so player profiles, the leaderboard
 // and the member comparison update exactly as they do for an uploaded scorecard.
@@ -28,7 +28,7 @@ type liveMatchRequest struct {
 
 // GET /api/scorer/live — matches that are still being scored.
 func (s *Server) ListLiveMatches(c *gin.Context) {
-	rows, err := s.DB.Query(`SELECT id, title, format, status, updated_at FROM live_matches WHERE status = 'live' AND NOT archived ORDER BY updated_at DESC`)
+	rows, err := s.DB.Query(`SELECT id, title, format, status, updated_at FROM scorer_matches WHERE status = 'live' AND NOT archived ORDER BY updated_at DESC`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load live matches"})
 		return
@@ -54,7 +54,7 @@ func (s *Server) ListScorerHistory(c *gin.Context) {
 	archived := c.Query("archived") == "1"
 	rows, err := s.DB.Query(
 		`SELECT id, title, format, status, archived, match_id, state, created_at, updated_at
-		 FROM live_matches WHERE archived = $1 ORDER BY created_at DESC`, archived)
+		 FROM scorer_matches WHERE archived = $1 ORDER BY created_at DESC`, archived)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load scored matches"})
 		return
@@ -90,7 +90,7 @@ func (s *Server) ArchiveLiveMatch(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "archived (true/false) is required"})
 		return
 	}
-	res, err := s.DB.Exec(`UPDATE live_matches SET archived = $1 WHERE id = $2`, req.Archived, c.Param("id"))
+	res, err := s.DB.Exec(`UPDATE scorer_matches SET archived = $1 WHERE id = $2`, req.Archived, c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the match"})
 		return
@@ -106,7 +106,7 @@ func (s *Server) ArchiveLiveMatch(c *gin.Context) {
 func (s *Server) GetLiveMatch(c *gin.Context) {
 	var state []byte
 	var status string
-	err := s.DB.QueryRow(`SELECT state, status FROM live_matches WHERE id = $1`, c.Param("id")).Scan(&state, &status)
+	err := s.DB.QueryRow(`SELECT state, status FROM scorer_matches WHERE id = $1`, c.Param("id")).Scan(&state, &status)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Live match not found"})
 		return
@@ -123,7 +123,7 @@ func (s *Server) CreateLiveMatch(c *gin.Context) {
 	}
 	var id int
 	err := s.DB.QueryRow(
-		`INSERT INTO live_matches (title, format, state) VALUES ($1,$2,$3::jsonb) RETURNING id`,
+		`INSERT INTO scorer_matches (title, format, state) VALUES ($1,$2,$3::jsonb) RETURNING id`,
 		req.Title, req.Format, string(req.State),
 	).Scan(&id)
 	if err != nil {
@@ -141,7 +141,7 @@ func (s *Server) SaveLiveMatch(c *gin.Context) {
 		return
 	}
 	res, err := s.DB.Exec(
-		`UPDATE live_matches SET title=$1, format=$2, state=$3::jsonb, updated_at=NOW() WHERE id=$4 AND status='live'`,
+		`UPDATE scorer_matches SET title=$1, format=$2, state=$3::jsonb, updated_at=NOW() WHERE id=$4 AND status='live'`,
 		req.Title, req.Format, string(req.State), c.Param("id"),
 	)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *Server) SaveLiveMatch(c *gin.Context) {
 
 // DELETE /api/scorer/live/:id — throw away a match that was never finished.
 func (s *Server) DeleteLiveMatch(c *gin.Context) {
-	if _, err := s.DB.Exec(`DELETE FROM live_matches WHERE id = $1 AND status = 'live'`, c.Param("id")); err != nil {
+	if _, err := s.DB.Exec(`DELETE FROM scorer_matches WHERE id = $1 AND status = 'live'`, c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete the live match"})
 		return
 	}
@@ -226,7 +226,7 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 	}
 
 	var status string
-	if err := s.DB.QueryRow(`SELECT status FROM live_matches WHERE id = $1`, liveID).Scan(&status); err != nil {
+	if err := s.DB.QueryRow(`SELECT status FROM scorer_matches WHERE id = $1`, liveID).Scan(&status); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Live match not found"})
 		return
 	}
@@ -311,12 +311,12 @@ func (s *Server) FinishLiveMatch(c *gin.Context) {
 	// The autosave runs a moment after each ball, so the final state comes with the finish
 	// request too; History then always shows the complete match.
 	if st := c.PostForm("state"); st != "" && json.Valid([]byte(st)) {
-		if _, err := tx.Exec(`UPDATE live_matches SET state=$1::jsonb WHERE id=$2`, st, liveID); err != nil {
+		if _, err := tx.Exec(`UPDATE scorer_matches SET state=$1::jsonb WHERE id=$2`, st, liveID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save the final score"})
 			return
 		}
 	}
-	if _, err := tx.Exec(`UPDATE live_matches SET status='finished', match_id=$1, updated_at=NOW() WHERE id=$2`, matchID, liveID); err != nil {
+	if _, err := tx.Exec(`UPDATE scorer_matches SET status='finished', match_id=$1, updated_at=NOW() WHERE id=$2`, matchID, liveID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close the live match"})
 		return
 	}

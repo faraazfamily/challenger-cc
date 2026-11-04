@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, cached } from '../api';
 import PlayerCard from '../components/PlayerCard';
 
 export default function Home() {
-  const [team, setTeam] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [record, setRecord] = useState([]);
+  // Last visit's data first (instant), then the fresh copy from the server.
+  const [team, setTeam] = useState(() => cached('/api/team'));
+  const [players, setPlayers] = useState(() => cached('/api/players') || []);
+  const [record, setRecord] = useState(() => cached('/api/stats/team-record') || []);
 
   useEffect(() => {
     api.getTeam().then(setTeam).catch(() => {});
