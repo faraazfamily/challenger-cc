@@ -4,14 +4,15 @@ import { CountUp, reducedMotion } from '../motion';
 import { PlayerAvatar, hasPhoto } from './PlayerCard';
 
 // The top of a player's profile: a dark "stage" with a spotlight and the jersey number behind.
-// With an intro clip (e.g. made from their photo with an AI image-to-video tool: walks toward
-// the camera, stops, folds arms) the clip plays once and stays on its last frame.
+// With an intro clip (the player walks toward the camera and folds their arms, like a TV team
+// intro) the clip plays once, stays on its last frame and a broadcast-style name plate slides in.
 // Without one, the photo itself walks in from the back of the stage and settles into place.
 export default function PlayerStage({ player }) {
   const video = hasPhoto(player.intro_video_url) ? assetUrl(player.intro_video_url) : null;
   const poster = hasPhoto(player.photo_url) ? assetUrl(player.photo_url) : undefined;
   const videoRef = useRef(null);
   const [take, setTake] = useState(0);
+  const [played, setPlayed] = useState(reducedMotion());
   const bat = player.career?.batting || {};
   const bowl = player.career?.bowling || {};
 
@@ -19,6 +20,7 @@ export default function PlayerStage({ player }) {
     if (video && videoRef.current) {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(() => {});
+      setPlayed(false);
     } else {
       setTake((t) => t + 1); // remount the figure so the walk-in runs again
     }
@@ -36,10 +38,19 @@ export default function PlayerStage({ player }) {
       {player.jersey_number != null && <div className="stage-number" aria-hidden="true">{player.jersey_number}</div>}
       <div className="stage-spot" aria-hidden="true" />
 
-      <div className={`stage-figure ${video ? 'has-video' : ''}`} key={take}>
+      <div className={`stage-figure ${video ? 'has-video' : ''} ${played ? 'played' : ''}`} key={take}>
         {video ? (
-          <video ref={videoRef} className="stage-video" src={video} poster={poster} muted playsInline preload="auto"
-            autoPlay={!reducedMotion()} controls={reducedMotion()} />
+          <div className="stage-clip">
+            <video ref={videoRef} className="stage-video" src={video} poster={poster} muted playsInline preload="auto"
+              autoPlay={!reducedMotion()} controls={reducedMotion()} onEnded={() => setPlayed(true)} />
+            <div className="stage-plate" aria-hidden={!played}>
+              {player.jersey_number != null && <span className="plate-no">{player.jersey_number}</span>}
+              <span className="plate-text">
+                <strong>{player.name}</strong>
+                <span>{player.role}{player.is_captain ? ' · Captain' : player.is_vice_captain ? ' · Vice-Captain' : ''}</span>
+              </span>
+            </div>
+          </div>
         ) : (
           <PlayerAvatar player={player} className="stage-avatar" />
         )}

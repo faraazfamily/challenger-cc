@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, assetUrl } from '../api';
+import { prepareIntroVideo } from './introVideo';
 
 const BLANK = { name: '', role: 'Batsman', batting_style: '', bowling_style: '', jersey_number: '', bio: '', fielding_notes: '', is_captain: false, is_vice_captain: false, is_wicketkeeper: false };
 const ROLES = ['Batsman', 'Bowler', 'All-rounder', 'Wicketkeeper'];
@@ -56,6 +57,8 @@ export default function AdminPlayers() {
   const [preview, setPreview] = useState('');
   const photoInput = useRef(null);
   const [clip, setClip] = useState(null);
+  const [clipUrl, setClipUrl] = useState('');
+  const [clipStatus, setClipStatus] = useState('');
   const clipInput = useRef(null);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -73,6 +76,8 @@ export default function AdminPlayers() {
     setPhoto(null);
     setPreview('');
     setClip(null);
+    setClipUrl('');
+    setClipStatus('');
     setError('');
     setOpen(true);
   }
@@ -87,6 +92,8 @@ export default function AdminPlayers() {
     });
     setPhoto(null);
     setClip(null);
+    setClipUrl('');
+    setClipStatus('');
     setPreview(assetUrl(p.photo_url) || '');
     setError('');
     setOpen(true);
@@ -105,8 +112,28 @@ export default function AdminPlayers() {
     if (photoInput.current) photoInput.current.value = '';
   }
 
+  // The walking-in video: shrunk/trimmed in the browser if it is big, then previewed here.
+  async function chooseClip(file) {
+    if (!file) return;
+    setError('');
+    setClipStatus('Video check ho rahi hai...');
+    try {
+      const ready = await prepareIntroVideo(file, setClipStatus);
+      setClip(ready);
+      setClipUrl(URL.createObjectURL(ready));
+      setClipStatus('');
+    } catch (err) {
+      setClipStatus('');
+      setError(err.message);
+    } finally {
+      if (clipInput.current) clipInput.current.value = '';
+    }
+  }
+
   function removeClip() {
     setClip(null);
+    setClipUrl('');
+    setClipStatus('');
     setForm((f) => ({ ...f, existing_intro_video_url: '' }));
     if (clipInput.current) clipInput.current.value = '';
   }
@@ -118,6 +145,8 @@ export default function AdminPlayers() {
     setPhoto(null);
     setPreview('');
     setClip(null);
+    setClipUrl('');
+    setClipStatus('');
     setError('');
   }
 
@@ -259,24 +288,38 @@ export default function AdminPlayers() {
                   <input ref={photoInput} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => choosePhoto(e.target.files?.[0])} />
                 </div>
               </div>
-              <div className="photo-picker clip-picker">
-                <div className="photo-preview">
-                  {clip || form.existing_intro_video_url ? <span title="Intro clip">▶</span> : <span>–</span>}
+              <div className="clip-box">
+                <div className="clip-head">
+                  <strong>Intro video</strong>
+                  <span>Player camera ki taraf chal kar aaye aur haath bandh le (3-5 second)</span>
                 </div>
-                <div>
-                  <button className="btn btn-secondary btn-sm" type="button" onClick={() => clipInput.current?.click()}>Choose intro clip</button>
-                  {(clip || form.existing_intro_video_url) && (
-                    <button className="btn btn-secondary btn-sm" type="button" onClick={removeClip}>Remove clip</button>
+                {(clipUrl || form.existing_intro_video_url) ? (
+                  <video className="clip-preview" src={clipUrl || assetUrl(form.existing_intro_video_url)} muted playsInline autoPlay loop controls />
+                ) : (
+                  <button type="button" className="clip-empty" onClick={() => clipInput.current?.click()} disabled={!!clipStatus}>
+                    <span className="clip-icon">🎬</span>
+                    <span>{clipStatus || 'Video chuno ya record karo'}</span>
+                  </button>
+                )}
+                {clipStatus && (clipUrl || form.existing_intro_video_url) && <p className="clip-status">{clipStatus}</p>}
+                <div className="clip-actions">
+                  <button className="btn btn-secondary btn-sm" type="button" onClick={() => clipInput.current?.click()} disabled={!!clipStatus}>
+                    {clipUrl || form.existing_intro_video_url ? 'Change video' : 'Choose video'}
+                  </button>
+                  {(clipUrl || form.existing_intro_video_url) && (
+                    <button className="btn btn-secondary btn-sm" type="button" onClick={removeClip} disabled={!!clipStatus}>Remove video</button>
                   )}
-                  <p>
-                    {clip ? clip.name : form.existing_intro_video_url ? 'Intro clip added.' : 'Optional. A 3-5 second MP4 (max 15 MB) of the player walking in and folding their arms. It plays once on their profile.'}
-                  </p>
-                  <input ref={clipInput} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.webm,.mov" hidden onChange={(e) => setClip(e.target.files?.[0] || null)} />
                 </div>
+                <ul className="clip-tips">
+                  <li>Phone ko seedha (portrait) pakdo, peeche saaf ya dark deewar ho.</li>
+                  <li>Player 3-4 kadam camera ki taraf chale, ruke, haath bandhe aur camera mein dekhe.</li>
+                  <li>Badi video apne aap chhoti ho jaati hai (pehle 6 second rakhe jaate hain).</li>
+                </ul>
+                <input ref={clipInput} type="file" accept="video/*,.mp4,.m4v,.webm,.mov" hidden onChange={(e) => chooseClip(e.target.files?.[0])} />
               </div>
               {error && <div className="error-text">{error}</div>}
               <div style={{ marginTop: 16 }}>
-                <button className="btn btn-primary" type="submit">{editingId ? 'Update Player' : 'Add Player'}</button>
+                <button className="btn btn-primary" type="submit" disabled={!!clipStatus}>{editingId ? 'Update Player' : 'Add Player'}</button>
               </div>
             </form>
           </div>
