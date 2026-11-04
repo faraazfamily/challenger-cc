@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isLoggedIn } from '../api';
 import AdminPlayers from '../components/AdminPlayers';
 import AdminMatches from '../components/AdminMatches';
@@ -8,9 +8,13 @@ import AdminScorecard from '../components/AdminScorecard';
 import AdminScorer from '../scorer/AdminScorer';
 
 const TABS = ['Players', 'Matches', 'Scorer', 'Tournaments', 'Upload Scorecard'];
+const slug = (t) => t.toLowerCase().replace(/ /g, '-');
 
 export default function Admin() {
-  const [tab, setTab] = useState('Players');
+  // The open tab lives in the URL (/admin?tab=scorer), so a refresh stays on it.
+  const [params, setParams] = useSearchParams();
+  const tab = TABS.find((t) => slug(t) === params.get('tab')) || TABS[0];
+  const setTab = (t) => setParams({ tab: slug(t) });
   const navigate = useNavigate();
 
   useEffect(() => {

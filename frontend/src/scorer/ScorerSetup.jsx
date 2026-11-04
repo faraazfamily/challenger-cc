@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { FORMATS, defaultConfig, createMatch, newPid } from './engine';
 
@@ -92,7 +93,15 @@ export default function ScorerSetup({ onStart, onCancel }) {
   const [ourSide, setOurSide] = useState(0);
   const [squad, setSquad] = useState([]);
   const [tournaments, setTournaments] = useState([]);
-  const [advanced, setAdvanced] = useState(false);
+  // KDM-style: Advanced settings is its own screen (?adv=1), so the phone's back button closes it.
+  // Both screens live in this one form, so nothing typed is lost when switching.
+  const [params, setParams] = useSearchParams();
+  const advanced = params.get('adv') === '1';
+  const setAdvanced = (on) => setParams((prev) => {
+    const next = new URLSearchParams(prev);
+    if (on) next.set('adv', '1'); else next.delete('adv');
+    return next;
+  }, { replace: !on });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -142,7 +151,9 @@ export default function ScorerSetup({ onStart, onCancel }) {
   }
 
   return (
-    <form onSubmit={start} className="sc-quick">
+    <form onSubmit={start} className={`sc-quick ${advanced ? "sc-quick-wide" : ""}`}>
+      {!advanced && (
+      <>
       <h3>New match</h3>
       <div className="sc-qlabel">Teams</div>
       <div className="card sc-panel">
@@ -166,15 +177,30 @@ export default function ScorerSetup({ onStart, onCancel }) {
       <div className="sc-qlabel">Which one is your team? <span className="sc-small">(career stats are saved for this team only)</span></div>
       <div className="card sc-panel"><Radio name="ours" value={ourSide} onChange={(v) => setOurSide(Number(v))} options={[[0, label(0)], [1, label(1)]]} /></div>
 
+      <button type="button" className="card sc-advrow" onClick={() => setAdvanced(true)}>
+        <span className="sc-advicon" aria-hidden="true">⚙</span>
+        <span className="sc-advtext">
+          <strong>Advanced settings</strong>
+          <span>{format} · {cfg.playersPerSide} players a side · wide {cfg.wideRuns}, no-ball {cfg.noBallRuns}{venue.trim() ? ` · ${venue.trim()}` : ''}</span>
+        </span>
+        <span className="sc-advchev" aria-hidden="true">›</span>
+      </button>
+
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       <div className="sc-qactions">
-        <button type="button" className="sc-linkbtn" onClick={() => setAdvanced(!advanced)}>{advanced ? 'Hide advanced settings' : 'Advanced settings'}</button>
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
         <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Starting...' : 'Start match'}</button>
       </div>
-      <div className="sc-small" style={{ marginBottom: 16 }}>Players are added while scoring: just type their names when asked. <button type="button" className="sc-linkbtn" onClick={onCancel}>Cancel</button></div>
+      <div className="sc-small sc-qhint">Players are added while scoring: just type their names when asked.</div>
+      </>
+      )}
 
       {advanced && (
       <>
+      <div className="sc-advhead">
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAdvanced(false)}>← Back</button>
+        <h3>Advanced settings</h3>
+      </div>
       <div className="card sc-panel">
         <h3>Match format</h3>
         <div className="stat-tabs">
@@ -253,6 +279,10 @@ export default function ScorerSetup({ onStart, onCancel }) {
       <div className="sc-two">
         <TeamPicker label={label(0)} team={teams[0]} setTeam={setTeam(0)} squad={squad} takenIds={takenIds} isOurs={Number(ourSide) === 0} onMakeOurs={() => setOurSide(0)} />
         <TeamPicker label={label(1)} team={teams[1]} setTeam={setTeam(1)} squad={squad} takenIds={takenIds} isOurs={Number(ourSide) === 1} onMakeOurs={() => setOurSide(1)} />
+      </div>
+      {error && <div className="error-text" style={{ margin: '12px 0' }}>{error}</div>}
+      <div className="sc-qactions sc-advdone">
+        <button type="button" className="btn btn-primary" onClick={() => setAdvanced(false)}>Done</button>
       </div>
       </>
       )}

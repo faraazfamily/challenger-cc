@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { matchTitle } from './engine';
 import { historyItem, teamRecords, playerStats } from './stats';
@@ -150,8 +151,21 @@ function Players({ players, team, setTeam }) {
 const HOME_TABS = [['history', 'History'], ['teams', 'Teams'], ['players', 'Players']];
 
 export default function AdminScorer() {
-  const [view, setView] = useState('home');
-  const [tab, setTab] = useState('history');
+  // Which screen is open lives in the URL next to the admin tab, so a refresh (or the phone's
+  // back button) lands on the same place: sc = home tab, new = setup, live = match being scored,
+  // view = saved match.
+  const [params, setParams] = useSearchParams();
+  const go = (patch, replace = false) => setParams((prev) => {
+    const next = new URLSearchParams(prev);
+    Object.entries(patch).forEach(([k, v]) => (v === null || v === undefined ? next.delete(k) : next.set(k, String(v))));
+    return next;
+  }, { replace });
+  const tab = HOME_TABS.some(([k]) => k === params.get('sc')) ? params.get('sc') : 'history';
+  const setTab = (k) => go({ sc: k }, true);
+  const isNew = params.get('new') === '1';
+  const liveId = params.get('live');
+  const viewId = params.get('view');
+  const home = !isNew && !liveId && !viewId;
   const [rows, setRows] = useState([]);
   const [archivedRows, setArchivedRows] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
@@ -164,7 +178,18 @@ export default function AdminScorer() {
     api.scorerHistory().then(setRows).catch((e) => setError(e.message));
     if (showArchived) api.scorerHistory(true).then(setArchivedRows).catch((e) => setError(e.message));
   };
-  useEffect(() => { load(); }, [showArchived]);
+  useEffect(() => { if (home) load(); }, [home, showArchived]);
+
+  // Opening a URL with live= / view= (a refresh) loads that match.
+  useEffect(() => {
+    if (liveId && String(current?.id) !== liveId) resume(liveId);
+  }, [liveId]);
+  useEffect(() => {
+    if (!viewId || String(viewing?.id) === viewId) return;
+    api.scorerGet(viewId)
+      .then((r) => setViewing({ id: Number(viewId), state: r.state }))
+      .catch((e) => { setError(e.message); go({ view: null }, true); });
+  }, [viewId]);
 
   // A match whose state is broken should not take the whole screen down.
   const safe = (fn, list) => list.flatMap((r) => { try { return [fn(r)]; } catch { return []; } });
@@ -178,7 +203,7 @@ export default function AdminScorer() {
     setError('');
     const r = await api.scorerCreate({ title: matchTitle(match), format: match.config.format, state: match });
     setCurrent({ id: r.id, match });
-    setView('live');
+    go({ new: null, adv: null, live: r.id }, true);
   }
 
   async function resume(id) {
@@ -191,15 +216,15 @@ export default function AdminScorer() {
         const local = JSON.parse(localStorage.getItem(`cc_scorer_${id}`) || 'null');
         if (local && eventCount(local) > eventCount(match)) match = local;
       } catch { /* ignore a broken backup */ }
-      setCurrent({ id, match });
-      setView('live');
+      setCurrent({ id: Number(id), match });
     } catch (e) {
       setError(e.message);
+      go({ live: null }, true);
     }
   }
 
   function open(h) {
-    if (h.saved) { setViewing(h.row); setView('match'); } else resume(h.id);
+    if (h.saved) { setViewing(h.row); go({ view: h.id }); } else go({ live: h.id });
   }
 
   async function archive(h, on) {
@@ -221,21 +246,25 @@ export default function AdminScorer() {
   }
 
   function exit() {
-    setView('home');
     setCurrent(null);
     setViewing(null);
-    load();
+    go({ new: null, adv: null, live: null, view: null }, true);
   }
 
-  if (view === 'setup') return <ScorerSetup onStart={start} onCancel={() => setView('home')} />;
-  if (view === 'live' && current) return <ScorerLive key={current.id} initial={current.match} serverId={current.id} onExit={exit} />;
-  if (view === 'match' && viewing) return <MatchView row={viewing} onBack={exit} />;
+  const loading = <div className="empty-state">Loading match...</div>;
+  if (isNew) return <ScorerSetup onStart={start} onCancel={exit} />;
+  if (liveId) {
+    return current && String(current.id) === liveId
+      ? <ScorerLive key={current.id} initial={current.match} serverId={current.id} onExit={exit} />
+      : (error ? <div className="error-text">{error}</div> : loading);
+  }
+  if (viewId) return viewing && String(viewing.id) === viewId ? <MatchView row={viewing} onBack={exit} /> : loading;
 
   return (
     <div>
       <div className="squad-toolbar">
         <h3>Scorer</h3>
-        <button className="btn btn-primary" onClick={() => setView('setup')}>+ New match</button>
+        <button className="btn btn-primary" onClick={() => go({ new: 1 })}>+ New match</button>
       </div>
       <div className="sc-atabs sc-hometabs">
         {HOME_TABS.map(([k, l]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}

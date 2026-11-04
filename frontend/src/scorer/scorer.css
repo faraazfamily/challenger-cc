@@ -110,14 +110,30 @@
 
 /* KDM-style quick start */
 .sc-quick { max-width: 560px; margin: 0 auto; }
+.sc-quick.sc-quick-wide { max-width: 860px; }
 .sc-qlabel { color: var(--gold-light); font-weight: 700; margin: 4px 0 6px; }
 .sc-quick .sc-panel { padding: 12px 16px; margin-bottom: 14px; }
 .sc-quick .sc-panel input[type=number], .sc-quick .sc-panel input:not([type]) { width: 100%; }
 .sc-radios { display: flex; gap: 22px; flex-wrap: wrap; }
 .sc-radio { display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
 .sc-radio input { accent-color: var(--gold-ink); width: 18px; height: 18px; }
-.sc-qactions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
-.sc-qactions .btn { min-width: 160px; }
+.sc-qactions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+.sc-qactions .btn { width: 100%; padding: 12px 18px; font-size: 1rem; }
+.sc-advdone { grid-template-columns: 1fr; max-width: 560px; margin: 16px auto 8px; }
+.sc-qhint { text-align: center; margin-bottom: 16px; }
+/* "Advanced settings" row: a tappable list item that opens its own screen (KDM-style) */
+.sc-advrow {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; margin: 4px 0 16px;
+  text-align: left; cursor: pointer; font: inherit; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sc-advrow:hover { border-color: var(--gold); box-shadow: 0 6px 16px rgba(59,182,220,0.18); }
+.sc-advicon { flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #e7f6fb; color: var(--gold-ink); font-size: 1.25rem; }
+.sc-advtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sc-advtext strong { color: var(--text-dark); font-size: 1rem; }
+.sc-advtext span { color: #6b7280; font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-advchev { flex: none; color: var(--gold-ink); font-size: 1.6rem; line-height: 1; }
+.sc-advhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.sc-quick .sc-advhead h3 { margin: 0; }
 .sc-linkbtn { background: none; border: none; color: var(--gold-light); font-weight: 700; cursor: pointer; padding: 4px 0; text-decoration: underline; }
 
 /* player type-or-pick box: compact dropdown */
