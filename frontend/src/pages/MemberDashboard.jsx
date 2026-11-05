@@ -1,18 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LogOut, Swords, Users } from 'lucide-react';
 import { api } from '../api';
 import { PlayerAvatar } from '../components/PlayerCard';
-import { SkeletonStage } from '../components/Feedback';
+import { SkeletonStage, EmptyState } from '../components/Feedback';
+import { CountUp } from '../motion';
 
+const bat = (p) => p.career?.batting || {};
+const bowl = (p) => p.career?.bowling || {};
+const num = (v) => {
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+// Counting stats (runs, wickets, highest) compare as they are: 0 is a real total.
+// Rate stats only mean something when the player has actually batted / bowled, so they
+// need both players to have data; otherwise nobody gets the point and "—" is shown.
+// (A player who never bowled has economy 0.00 in the data, which used to "win".)
 const ROWS = [
-  { key: 'runs', label: 'Runs', higher: true, pick: (p) => p.career.batting.runs },
-  { key: 'batAvg', label: 'Batting Average', higher: true, pick: (p) => p.career.batting.average },
-  { key: 'sr', label: 'Strike Rate', higher: true, pick: (p) => p.career.batting.strikeRate },
-  { key: 'hs', label: 'Highest Score', higher: true, pick: (p) => p.career.batting.highestScore },
-  { key: 'wkts', label: 'Wickets', higher: true, pick: (p) => p.career.bowling.wickets },
-  { key: 'bowlAvg', label: 'Bowling Average', higher: false, pick: (p) => p.career.bowling.average },
-  { key: 'econ', label: 'Economy', higher: false, pick: (p) => p.career.bowling.economy },
-  { key: 'field', label: 'Fielding', higher: true, pick: (p) => fieldingLevel(p.fielding_notes).rank, show: (p) => fieldingLevel(p.fielding_notes).label },
+  { key: 'runs', label: 'Runs', higher: true, pick: (p) => bat(p).runs },
+  { key: 'hs', label: 'Highest score', higher: true, pick: (p) => bat(p).highestScore },
+  { key: 'batAvg', label: 'Batting average', higher: true, rate: true, pick: (p) => bat(p).average, has: (p) => bat(p).innings > 0, none: 'Did not bat' },
+  { key: 'sr', label: 'Strike rate', higher: true, rate: true, pick: (p) => bat(p).strikeRate, has: (p) => bat(p).innings > 0, none: 'Did not bat' },
+  { key: 'wkts', label: 'Wickets', higher: true, pick: (p) => bowl(p).wickets },
+  { key: 'econ', label: 'Economy', higher: false, rate: true, pick: (p) => bowl(p).economy, has: (p) => bowl(p).innings > 0 && num(bowl(p).overs) > 0, none: 'Did not bowl' },
+  { key: 'bowlAvg', label: 'Bowling average', higher: false, rate: true, pick: (p) => bowl(p).average, has: (p) => bowl(p).wickets > 0, none: 'No wickets' },
+  { key: 'field', label: 'Fielding', higher: true, rate: true, pick: (p) => fieldingLevel(p.fielding_notes).rank, has: (p) => fieldingLevel(p.fielding_notes).rank > 0, show: (p) => fieldingLevel(p.fielding_notes).label, none: 'Not rated' },
 ];
 
 function fieldingLevel(notes) {
@@ -25,68 +38,63 @@ function fieldingLevel(notes) {
   return { label: notes, rank: 2 };
 }
 
-function asNumber(value) {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (typeof value !== 'string') return null;
-  const n = parseFloat(value);
-  return Number.isFinite(n) ? n : null;
+// One row: who leads ('a' | 'b' | null), what to show, and how wide each side of the bar is.
+function compareRow(row, a, b) {
+  const okA = row.has ? row.has(a) : true;
+  const okB = row.has ? row.has(b) : true;
+  const va = num(row.pick(a)) ?? 0;
+  const vb = num(row.pick(b)) ?? 0;
+  const label = (p, ok) => (!ok ? row.none : row.show ? row.show(p) : row.pick(p) ?? 0);
+  const out = { showA: label(a, okA), showB: label(b, okB), lead: null, share: 50, compared: okA && okB };
+  if (!out.compared) return out;
+  if (va !== vb) out.lead = (row.higher ? va > vb : va < vb) ? 'a' : 'b';
+  const sa = row.higher ? va : vb; // lower is better: the other player's number is this side's "strength"
+  const sb = row.higher ? vb : va;
+  out.share = sa + sb > 0 ? Math.round((sa / (sa + sb)) * 100) : 50;
+  return out;
 }
 
-function leader(row, a, b) {
-  const na = asNumber(row.pick(a));
-  const nb = asNumber(row.pick(b));
-  if (na == null && nb == null) return null;
-  if (na == null) return 'b';
-  if (nb == null) return 'a';
-  if (na === nb) return null;
-  if (row.higher) return na > nb ? 'a' : 'b';
-  return na < nb ? 'a' : 'b';
-}
-
-function CompareColumn({ player, other }) {
+function Duel({ me, other }) {
+  const rows = ROWS.map((r) => ({ ...r, ...compareRow(r, me, other) }));
+  const aWins = rows.filter((r) => r.lead === 'a').length;
+  const bWins = rows.filter((r) => r.lead === 'b').length;
+  const verdict = aWins === bWins ? 'Level overall' : `${aWins > bWins ? me.name : other.name} is ahead`;
   return (
-    <div className="card compare-side">
-      <PlayerAvatar player={player} className="compare-avatar" />
-      {player.jersey_number ? <div className="jersey-badge">{player.jersey_number}</div> : null}
-      <h3 style={{ margin: '8px 0 4px' }}>{player.name}</h3>
-      <span className="role-tag">{player.role}</span>
-      {player.is_wicketkeeper && <div className="captain-badge">Wicketkeeper</div>}
-      {ROWS.map((row) => {
-        const lead = leader(row, player, other);
-        const wins = lead === 'a';
-        return (
-          <div key={row.key} className={`compare-stat ${wins ? 'compare-lead' : ''}`}>
-            <span>{row.label}</span>
-            <strong>{row.show ? row.show(player) : row.pick(player)}</strong>
+    <div className="duel" key={other.id}>
+      <div className="duel-head">
+        <div className={`duel-player ${aWins > bWins ? 'ahead' : ''}`}>
+          <PlayerAvatar player={me} className="duel-avatar" />
+          <strong>{me.name}</strong>
+          <span>{me.role}</span>
+        </div>
+        <div className="duel-score">
+          <span className="duel-points"><b><CountUp value={aWins} /></b><i>–</i><b><CountUp value={bWins} /></b></span>
+          <span className="duel-verdict">{verdict}</span>
+        </div>
+        <div className={`duel-player right ${bWins > aWins ? 'ahead' : ''}`}>
+          <PlayerAvatar player={other} className="duel-avatar" />
+          <strong>{other.name}</strong>
+          <span>{other.role}</span>
+        </div>
+      </div>
+
+      <div className="duel-rows">
+        {rows.map((r, i) => (
+          <div key={r.key} className={`duel-row ${r.compared ? '' : 'off'}`} style={{ '--i': i, '--share': `${r.share}%` }}>
+            <div className="duel-values">
+              <span className={r.lead === 'a' ? 'win' : ''}>{r.showA}</span>
+              <em>{r.label}</em>
+              <span className={r.lead === 'b' ? 'win' : ''}>{r.showB}</span>
+            </div>
+            <div className="duel-bar" aria-hidden="true">
+              <span className={`a ${r.lead === 'a' ? 'win' : ''}`} />
+              <span className={`b ${r.lead === 'b' ? 'win' : ''}`} />
+            </div>
+            {!r.compared && <div className="duel-note">Not compared: needs data for both players</div>}
           </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function Verdict({ a, b }) {
-  let aWins = 0;
-  let bWins = 0;
-  ROWS.forEach((row) => {
-    const lead = leader(row, a, b);
-    if (lead === 'a') aWins += 1;
-    if (lead === 'b') bWins += 1;
-  });
-  let text = 'Too close to call. They are level overall.';
-  let who = '';
-  if (aWins > bWins) {
-    who = a.name;
-    text = `${a.name} is ahead overall, ${aWins}–${bWins}.`;
-  } else if (bWins > aWins) {
-    who = b.name;
-    text = `${b.name} is ahead overall, ${bWins}–${aWins}.`;
-  }
-  return (
-    <div className="verdict">
-      <span>Overall</span>
-      <strong>{who || 'Level'}</strong>
-      <p>{text} Fielding uses the note on each player: poor, average, good, or excellent.</p>
+        ))}
+      </div>
+      <p className="duel-foot">Points only count where both players have numbers. Fielding uses the note on each player: poor, average, good or excellent.</p>
     </div>
   );
 }
@@ -151,37 +159,37 @@ export default function MemberDashboard() {
     navigate('/member-login');
   }
 
-  if (error) return <div className="container section empty-state">{error}</div>;
+  if (error) return <div className="container section"><EmptyState icon={Users} title="Something went wrong">{error}</EmptyState></div>;
   if (!player) return <SkeletonStage />;
 
   const others = squad.filter((p) => p.id !== player.id);
 
   return (
     <div className="container section">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-        <button className="btn btn-secondary" type="button" onClick={logout}>Log out</button>
-      </div>
-      <h2>Compare with a teammate</h2>
-      <div className="form-group" style={{ maxWidth: 360 }}>
-        <label style={{ color: '#d5e2f0' }}>Pick someone, for example Asad</label>
-        <select value={compareId} onChange={(e) => setCompareId(e.target.value)}>
-          <option value="">Select a player</option>
-          {others.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-      </div>
-      {other ? (
-        <>
-        <Verdict a={player} b={other} />
-        <div className="compare-stage">
-          <CompareColumn player={player} other={other} side="a" />
-          <div className="compare-vs">VS</div>
-          <CompareColumn player={other} other={player} side="b" />
+      <div className="member-head">
+        <PlayerAvatar player={player} className="member-avatar" />
+        <div>
+          <span className="member-hi">Welcome back</span>
+          <h2>{player.name}</h2>
         </div>
-        </>
-      ) : (
-        <div className="empty-state">Choose a teammate above to see both players side by side.</div>
+        <button className="btn btn-secondary btn-sm btn-icon" type="button" onClick={logout}><LogOut size={15} aria-hidden="true" /> Log out</button>
+      </div>
+
+      <h3 className="pick-title"><Swords size={20} aria-hidden="true" /> Compare with a teammate</h3>
+      {/* tap a face instead of a native dropdown: scrolls sideways on a phone */}
+      <div className="mate-strip" role="listbox" aria-label="Pick a teammate">
+        {others.map((p, i) => (
+          <button key={p.id} type="button" role="option" aria-selected={String(p.id) === String(compareId)}
+            className={`mate ${String(p.id) === String(compareId) ? 'on' : ''}`} style={{ '--i': i }}
+            onClick={() => setCompareId(String(p.id) === String(compareId) ? '' : String(p.id))}>
+            <PlayerAvatar player={p} className="mate-avatar" />
+            <span>{p.name}</span>
+          </button>
+        ))}
+      </div>
+
+      {other ? <Duel me={player} other={other} /> : (
+        <EmptyState icon={Swords} title="Pick a teammate">Tap a face above to see who is ahead, stat by stat.</EmptyState>
       )}
     </div>
   );

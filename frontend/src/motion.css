@@ -274,7 +274,8 @@ html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-sprin
 }
 .modal-backdrop { animation: backdrop-in 0.25s ease backwards; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
 .modal-card { animation: modal-in 0.35s var(--ease-spring) backwards; }
-@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+/* fade only the dim + blur: fading the whole backdrop would also fade the card inside it */
+@keyframes backdrop-in { from { background-color: rgba(6,8,14,0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: none; } }
 .upload-panel { transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
 .upload-panel.hot { box-shadow: 0 0 0 4px rgba(59,182,220,0.2); animation: hot-pulse 1.2s ease-in-out infinite; }

@@ -4,6 +4,7 @@ import { api } from '../api';
 import * as E from './engine';
 import ScorecardView, { shareScorecard } from './ScorecardView';
 import Analysis from './Analysis';
+import { Undo2, ArrowLeftRight, UserMinus, Handshake, CirclePlus, Ellipsis } from 'lucide-react';
 import PlayerInput from './PlayerInput';
 
 function Modal({ title, onClose, children }) {
@@ -62,13 +63,14 @@ function Openers({ sum, squad, onStart, onBack }) {
 }
 
 const EXTRA_BOXES = [['wd', 'Wide'], ['nb', 'No Ball'], ['b', 'Byes'], ['lb', 'Leg Byes']];
+// A short buzz on phones that support it, so a run tap feels like a native app.
+const buzz = () => { try { navigator.vibrate?.(12); } catch { /* not supported */ } };
 const NO_EXTRAS = { wd: false, nb: false, b: false, lb: false, w: false };
 
 export default function ScorerLive({ initial, serverId, onExit }) {
   const [match, setMatch] = useState(initial);
   const [ex, setEx] = useState(NO_EXTRAS);
   const [squad, setSquad] = useState([]);
-  const [moreRuns, setMoreRuns] = useState(7);
   const [shareNote, setShareNote] = useState('');
   const [modal, setModal] = useState(null);
   const [view, setView] = useState('score');
@@ -140,6 +142,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
     setEx(next);
   }
   function tap(runs, boundary) {
+    buzz();
     if (ex.w) { openWicket(runs); return; }
     push({ t: 'ball', runs, boundary: boundary || undefined, extra, nbOff });
     setEx(NO_EXTRAS);
@@ -280,38 +283,32 @@ export default function ScorerLive({ initial, serverId, onExit }) {
       )}
 
       {view === 'score' && playable && (
-        <div className="sc-pad">
+        // App-style scoring dock: extras as toggle chips, big run keys, icon tools.
+        // On phones it is fixed to the bottom of the screen (scorer.css).
+        <div className="sc-dock">
           {sum.freeHit && <div className="sc-free">FREE HIT: only run-out type dismissals</div>}
-          <div className="card sc-boxes">
-            <div className="sc-boxrow">
-              {EXTRA_BOXES.map(([k, l]) => (
-                <label key={k} className={`sc-box ${ex[k] ? 'on' : ''}`}><input type="checkbox" checked={ex[k]} onChange={() => toggle(k)} /> {l}</label>
-              ))}
-            </div>
-            <div className="sc-boxrow">
-              <label className={`sc-box sc-box-w ${ex.w ? 'on' : ''}`}><input type="checkbox" checked={ex.w} onChange={() => toggle('w')} /> Wicket</label>
-              <span className="sc-boxbtns">
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => { setMore({ ...more, view: 'retire' }); setModal('more'); }}>Retire</button>
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => push({ t: 'swap' })}>Swap Batsman</button>
-              </span>
-            </div>
-            {hint && <div className="sc-mode">{hint}: now tap the runs{ex.w ? ' (runs completed on this ball)' : ''}</div>}
+          <div className="sc-xchips" role="group" aria-label="Extras for this ball">
+            {[...EXTRA_BOXES, ['w', 'Wicket']].map(([k, l]) => (
+              <button key={k} type="button" aria-pressed={ex[k]} className={`sc-xchip ${k === 'w' ? 'wkt' : ''} ${ex[k] ? 'on' : ''}`} onClick={() => toggle(k)}>{l}</button>
+            ))}
           </div>
-          <div className="sc-padgrid">
-            <div className="card sc-utils">
-              <button type="button" className="btn btn-primary btn-sm" onClick={undo}>Undo</button>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal('parts')}>Partnerships</button>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setModal('extras')}>Extras</button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={openMore}>More</button>
-            </div>
-            <div className="card sc-runs">
-              {[0, 1, 2, 3, 4, 5, 6].map((n) => (
-                <button key={n} type="button" className={`sc-runkey ${n === 4 ? 'sc-four' : n === 6 ? 'sc-six' : ''}`}
-                  disabled={(noZero && n === 0) || (noSix && n === 6)}
-                  onClick={() => tap(n, n === 4 || n === 6 ? n : undefined)}>{n}</button>
-              ))}
-              <button type="button" className="sc-runkey" title="More runs" onClick={() => { setMoreRuns(7); setModal('runs'); }}>…</button>
-            </div>
+          {hint && <div className="sc-mode">{hint}: now tap the runs{ex.w ? ' (runs completed on this ball)' : ''}</div>}
+          <div className="sc-keys2">
+            {[0, 1, 2, 3, 4, 5, 6].map((n) => (
+              <button key={n} type="button" className={`sc-runkey ${n === 4 ? 'sc-four' : n === 6 ? 'sc-six' : ''} ${n === 0 ? 'sc-dotkey' : ''}`}
+                disabled={(noZero && n === 0) || (noSix && n === 6)}
+                onClick={() => tap(n, n === 4 || n === 6 ? n : undefined)}>
+                {n}{n === 4 || n === 6 ? <small>{n === 4 ? 'FOUR' : 'SIX'}</small> : n === 0 ? <small>DOT</small> : null}
+              </button>
+            ))}
+          </div>
+          <div className="sc-tools">
+            <button type="button" onClick={undo}><Undo2 size={19} aria-hidden="true" /><span>Undo</span></button>
+            <button type="button" onClick={() => push({ t: 'swap' })}><ArrowLeftRight size={19} aria-hidden="true" /><span>Swap</span></button>
+            <button type="button" onClick={() => { setMore({ ...more, view: 'retire' }); setModal('more'); }}><UserMinus size={19} aria-hidden="true" /><span>Retire</span></button>
+            <button type="button" onClick={() => setModal('parts')}><Handshake size={19} aria-hidden="true" /><span>Partners</span></button>
+            <button type="button" onClick={() => setModal('extras')}><CirclePlus size={19} aria-hidden="true" /><span>Extras</span></button>
+            <button type="button" onClick={openMore}><Ellipsis size={19} aria-hidden="true" /><span>More</span></button>
           </div>
         </div>
       )}
@@ -395,13 +392,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
         </Modal>
       )}
 
-      {/* ---- "..." runs, partnerships, extras ---- */}
-      {modal === 'runs' && (
-        <Modal title="Runs on this ball" onClose={closeModal}>
-          <div className="form-group"><input type="number" min="0" max="20" value={moreRuns} onChange={(e) => setMoreRuns(e.target.value)} autoFocus /></div>
-          <button className="btn btn-primary" onClick={() => { const n = Math.max(0, Number(moreRuns) || 0); closeModal(); tap(n); }}>OK</button>
-        </Modal>
-      )}
+      {/* ---- partnerships, extras ---- */}
       {modal === 'parts' && (
         <Modal title="Partnerships" onClose={closeModal}>
           {parts.length === 0 ? <p className="sc-small">No partnership yet.</p> : (
