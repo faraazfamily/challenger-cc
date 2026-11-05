@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, Clapperboard } from 'lucide-react';
+import { Plus, Pencil, Trash2, Clapperboard, Search, Star, Shield, Hand } from 'lucide-react';
 import { api, assetUrl } from '../api';
 import { prepareIntroVideo } from './introVideo';
 import { PlayerAvatar } from './PlayerCard';
+import { EmptyState, SkeletonRows } from './Feedback';
 
 const BLANK = { name: '', role: 'Batsman', batting_style: '', bowling_style: '', jersey_number: '', bio: '', fielding_notes: '', is_captain: false, is_vice_captain: false, is_wicketkeeper: false };
 const ROLES = ['Batsman', 'Bowler', 'All-rounder', 'Wicketkeeper'];
@@ -53,7 +54,7 @@ function KeeperSelect({ form, setForm, players, editingId }) {
 }
 
 export default function AdminPlayers() {
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState(null); // null = still loading (no false "No players found")
   const [form, setForm] = useState(BLANK);
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState('');
@@ -66,10 +67,9 @@ export default function AdminPlayers() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [nameFilter, setNameFilter] = useState('');
-  const [jerseyFilter, setJerseyFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
-  function load() { api.getPlayers().then(setPlayers).catch(() => {}); }
+  function load() { api.getPlayers().then(setPlayers).catch(() => setPlayers((p) => p || [])); }
   useEffect(load, []);
 
   function openAdd() {
@@ -172,61 +172,66 @@ export default function AdminPlayers() {
     }
   }
 
-  const filtered = players.filter((p) => {
-    const nameOk = p.name.toLowerCase().includes(nameFilter.trim().toLowerCase());
+  // One search box matches the name or the jersey number; roles are chips.
+  const q = nameFilter.trim().toLowerCase();
+  const filtered = (players || []).filter((p) => {
     const jersey = p.jersey_number == null ? '' : String(p.jersey_number);
-    const jerseyOk = !jerseyFilter.trim() || jersey.includes(jerseyFilter.trim());
-    const roleOk = !roleFilter || p.role === roleFilter;
-    return nameOk && jerseyOk && roleOk;
+    const textOk = !q || p.name.toLowerCase().includes(q) || jersey === q;
+    const roleOk = !roleFilter || p.role === roleFilter || (roleFilter === 'Wicketkeeper' && p.is_wicketkeeper);
+    return textOk && roleOk;
   });
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this player? This also removes their match stats.')) return;
-    await api.deletePlayer(id);
-    load();
+  async function handleDelete(p) {
+    if (!confirm(`Delete ${p.name}? This also removes their match stats.`)) return;
+    try {
+      await api.deletePlayer(p.id);
+      load();
+    } catch (err) {
+      alert(`Could not delete ${p.name}: ${err.message}`);
+    }
   }
 
   return (
     <div>
       <div className="squad-toolbar">
-        <h3>Squad ({filtered.length})</h3>
+        <h3>Squad <span className="count-pill">{filtered.length}</span></h3>
         <button className="btn btn-primary btn-icon" type="button" onClick={openAdd}><Plus size={17} aria-hidden="true" /> Add Player</button>
       </div>
 
-      <div className="filter-bar">
-        <div className="form-group">
-          <label>Name</label>
-          <input placeholder="Search by name" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label>Jersey</label>
-          <input placeholder="e.g. 25" value={jerseyFilter} onChange={(e) => setJerseyFilter(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label>Role</label>
-          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-            <option value="">All roles</option>
-            {ROLES.map((role) => <option key={role}>{role}</option>)}
-          </select>
+      <div className="list-filters">
+        <label className="search-box">
+          <Search size={17} aria-hidden="true" />
+          <input placeholder="Search name or jersey #" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} aria-label="Search players" />
+        </label>
+        <div className="chip-row" role="group" aria-label="Filter by role">
+          {['', ...ROLES].map((r) => (
+            <button key={r || 'all'} type="button" className={`filter-chip ${roleFilter === r ? 'on' : ''}`} onClick={() => setRoleFilter(r)}>{r || 'All'}</button>
+          ))}
         </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="empty-state">No players match these filters.</div>
+      {players === null ? <SkeletonRows rows={6} /> : filtered.length === 0 ? (
+        <EmptyState icon={Search} title="No players found">Try another name, jersey number or role.</EmptyState>
       ) : (
-        <div className="card squad-list">
+        <div className="card roster">
           {filtered.map((p) => (
-            <div className="squad-row" key={p.id} data-reveal>
+            // grid row: photo | name + role/badges | jersey | actions, so every column lines up
+            <div className="roster-row" key={p.id} data-reveal>
               <PlayerAvatar player={p} className="squad-avatar" />
-              <div className="jersey-badge">{p.jersey_number ?? '—'}</div>
-              <div className="squad-row-main">
-                <strong>{p.name} {p.is_captain ? '★' : ''}{p.is_vice_captain ? ' VC' : ''}{p.is_wicketkeeper ? ' WK' : ''}</strong>
-                <span className="role-tag">{p.role}</span>
-                {p.intro_video_url && <span className="squad-clip" title="Has an intro video"><Clapperboard size={15} /></span>}
+              <div className="roster-main">
+                <strong>{p.name}</strong>
+                <div className="roster-meta">
+                  <span className="role-tag">{p.role}</span>
+                  {p.is_captain && <span className="mini-badge cap" title="Captain"><Star size={11} aria-hidden="true" /> C</span>}
+                  {p.is_vice_captain && <span className="mini-badge" title="Vice-captain"><Shield size={11} aria-hidden="true" /> VC</span>}
+                  {p.is_wicketkeeper && <span className="mini-badge" title="Wicketkeeper"><Hand size={11} aria-hidden="true" /> WK</span>}
+                  {p.intro_video_url && <span className="mini-badge clip" title="Has an intro video"><Clapperboard size={11} aria-hidden="true" /></span>}
+                </div>
               </div>
-              <div className="squad-actions">
-                <button className="btn btn-secondary btn-sm btn-icon" type="button" onClick={() => startEdit(p)}><Pencil size={14} aria-hidden="true" /> Edit</button>
-                <button className="btn btn-danger btn-sm btn-icon" type="button" onClick={() => handleDelete(p.id)}><Trash2 size={14} aria-hidden="true" /> Delete</button>
+              <div className="roster-jersey" title="Jersey number">{p.jersey_number ?? '—'}</div>
+              <div className="roster-actions">
+                <button className="btn btn-secondary btn-sm btn-icon" type="button" onClick={() => startEdit(p)} aria-label={`Edit ${p.name}`}><Pencil size={14} aria-hidden="true" /><span>Edit</span></button>
+                <button className="btn btn-danger btn-sm btn-icon" type="button" onClick={() => handleDelete(p)} aria-label={`Delete ${p.name}`}><Trash2 size={14} aria-hidden="true" /><span>Delete</span></button>
               </div>
             </div>
           ))}
@@ -276,8 +281,8 @@ export default function AdminPlayers() {
                 <textarea rows={2} placeholder="e.g. One of the best fielders in the team" value={form.fielding_notes} onChange={(e) => setForm({ ...form, fielding_notes: e.target.value })} />
               </div>
               <div className="form-row">
-                <LeadershipSelect form={form} setForm={setForm} players={players} editingId={editingId} />
-                <KeeperSelect form={form} setForm={setForm} players={players} editingId={editingId} />
+                <LeadershipSelect form={form} setForm={setForm} players={players || []} editingId={editingId} />
+                <KeeperSelect form={form} setForm={setForm} players={players || []} editingId={editingId} />
               </div>
               <div className="photo-picker">
                 <div className="photo-preview">

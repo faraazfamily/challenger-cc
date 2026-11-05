@@ -8,6 +8,7 @@ import ScorerSetup from './ScorerSetup';
 import ScorerLive from './ScorerLive';
 import ScorecardView from './ScorecardView';
 import Analysis from './Analysis';
+import { SkeletonRows } from '../components/Feedback';
 import './scorer.css';
 
 const eventCount = (m) => (m?.innings || []).reduce((n, i) => n + i.events.length, 0) + (m?.innings?.length || 0);
@@ -32,13 +33,13 @@ function MatchView({ row, onBack }) {
   );
 }
 
-function History({ items, archived, setArchived, onOpen, onArchive, onDelete }) {
+function History({ loading, items, archived, setArchived, onOpen, onArchive, onDelete }) {
   return (
     <>
       <div className="sc-hist-bar">
         <label className="sc-check"><input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} /> Show archived</label>
       </div>
-      {items.length === 0 ? (
+      {loading ? <SkeletonRows rows={3} /> : items.length === 0 ? (
         <div className="empty-state">{archived ? 'No archived matches.' : 'No matches yet. Tap "New match" to start scoring.'}</div>
       ) : items.map((h) => (
         <div className="card sc-hist" key={h.id}>
@@ -167,7 +168,7 @@ export default function AdminScorer() {
   const liveId = params.get('live');
   const viewId = params.get('view');
   const home = !isNew && !liveId && !viewId;
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState(null); // null = still loading
   const [archivedRows, setArchivedRows] = useState([]);
   const [showArchived, setShowArchived] = useState(false);
   const [teamFilter, setTeamFilter] = useState('');
@@ -176,7 +177,7 @@ export default function AdminScorer() {
   const [error, setError] = useState('');
 
   const load = () => {
-    api.scorerHistory().then(setRows).catch((e) => setError(e.message));
+    api.scorerHistory().then(setRows).catch((e) => { setRows((r) => r || []); setError(e.message); });
     if (showArchived) api.scorerHistory(true).then(setArchivedRows).catch((e) => setError(e.message));
   };
   useEffect(() => { if (home) load(); }, [home, showArchived]);
@@ -193,7 +194,7 @@ export default function AdminScorer() {
   }, [viewId]);
 
   // A match whose state is broken should not take the whole screen down.
-  const safe = (fn, list) => list.flatMap((r) => { try { return [fn(r)]; } catch { return []; } });
+  const safe = (fn, list) => (list || []).flatMap((r) => { try { return [fn(r)]; } catch { return []; } });
   const items = useMemo(() => safe(historyItem, showArchived ? archivedRows : rows), [rows, archivedRows, showArchived]);
   const good = useMemo(() => safe((r) => (historyItem(r), r), rows), [rows]);
   const teams = useMemo(() => teamRecords(good), [good]);
@@ -272,7 +273,7 @@ export default function AdminScorer() {
       </div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       {tab === 'history' && (
-        <History items={items} archived={showArchived} setArchived={setShowArchived} onOpen={open} onArchive={archive} onDelete={discard} />
+        <History loading={rows === null && !showArchived} items={items} archived={showArchived} setArchived={setShowArchived} onOpen={open} onArchive={archive} onDelete={discard} />
       )}
       {tab === 'teams' && <Teams teams={teams} onPick={(t) => { setTeamFilter(t.key); setTab('players'); }} />}
       {tab === 'players' && <Players players={players} team={teamFilter} setTeam={setTeamFilter} />}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { api } from '../api';
+import { SkeletonRows } from './Feedback';
 
 const BLANK = { name: '', year: '', start_date: '', end_date: '' };
 
@@ -14,7 +15,7 @@ function toPayload(form) {
 }
 
 export default function AdminTournaments() {
-  const [tournaments, setTournaments] = useState([]);
+  const [tournaments, setTournaments] = useState(null); // null = still loading
   const [form, setForm] = useState(BLANK);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -22,7 +23,7 @@ export default function AdminTournaments() {
   const [yearFilter, setYearFilter] = useState('');
   const [error, setError] = useState('');
 
-  function load() { api.getTournaments().then(setTournaments).catch(() => {}); }
+  function load() { api.getTournaments().then(setTournaments).catch(() => setTournaments((t) => t || [])); }
   useEffect(load, []);
 
   function startAdd() {
@@ -65,8 +66,8 @@ export default function AdminTournaments() {
     load();
   }
 
-  const years = [...new Set(tournaments.map((t) => t.year).filter(Boolean))].sort((a, b) => b - a);
-  const filtered = tournaments.filter((t) => {
+  const years = [...new Set((tournaments || []).map((t) => t.year).filter(Boolean))].sort((a, b) => b - a);
+  const filtered = (tournaments || []).filter((t) => {
     const nameOk = t.name.toLowerCase().includes(nameFilter.trim().toLowerCase());
     const yearOk = !yearFilter || String(t.year) === String(yearFilter);
     return nameOk && yearOk;
@@ -120,7 +121,7 @@ export default function AdminTournaments() {
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {tournaments === null ? <SkeletonRows rows={3} /> : filtered.length === 0 ? (
         <div className="empty-state">{tournaments.length === 0 ? 'No tournaments yet. Use Add to create one.' : 'No tournaments match this filter.'}</div>
       ) : (
         <div className="tournament-grid">

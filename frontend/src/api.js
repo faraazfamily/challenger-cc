@@ -39,8 +39,19 @@ export function cached(path) {
   }
 }
 
+// Public reads retry once after a short pause on a network error or a 5xx, so a single
+// hiccup (cold server, dropped connection) does not show up as an error on the page.
+async function getWithRetry(path) {
+  try {
+    const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
+    if (res.status < 500) return res;
+  } catch { /* network error: try once more below */ }
+  await new Promise((r) => setTimeout(r, 600));
+  return fetch(`${BASE}${path}`, { headers: authHeaders() });
+}
+
 function getCached(path) {
-  return fetch(`${BASE}${path}`, { headers: authHeaders() }).then(handle).then((data) => {
+  return getWithRetry(path).then(handle).then((data) => {
     try { localStorage.setItem(CACHE + path, JSON.stringify(data)); } catch { /* storage full: just skip the cache */ }
     return data;
   });

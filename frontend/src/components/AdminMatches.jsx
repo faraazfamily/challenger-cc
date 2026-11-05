@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { api } from '../api';
+import { SkeletonRows } from './Feedback';
 
 export default function AdminMatches() {
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] = useState(null); // null = still loading
 
   useEffect(() => {
-    api.getMatches().then(setMatches).catch(() => {});
+    api.getMatches().then(setMatches).catch(() => setMatches((m) => m || []));
   }, []);
 
   async function toggleRecords(m) {
@@ -16,20 +17,20 @@ export default function AdminMatches() {
       : 'Remove this match from player stats, the leaderboard and the team record? The match itself is kept and you can switch it back on any time.';
     if (!confirm(msg)) return;
     await api.setMatchInRecords(m.id, next);
-    api.getMatches().then(setMatches).catch(() => {});
+    api.getMatches().then(setMatches).catch(() => setMatches((m) => m || []));
   }
 
   async function handleDelete(id) {
     if (!confirm('Delete this match? This also removes its scorecard stats.')) return;
     await api.deleteMatch(id);
-    api.getMatches().then(setMatches).catch(() => {});
+    api.getMatches().then(setMatches).catch(() => setMatches((m) => m || []));
   }
 
   return (
     <div>
       <div className="review-note">Matches are created from the scorecard PDF. Upload one from the Upload Scorecard tab.</div>
       <h3>All Matches</h3>
-      {matches.length === 0 ? (
+      {matches === null ? <SkeletonRows /> : matches.length === 0 ? (
         <div className="empty-state">No matches yet.</div>
       ) : (
         <div className="card">

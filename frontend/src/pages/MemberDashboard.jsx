@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Swords, Users } from 'lucide-react';
+import { LogOut, Swords, RotateCw } from 'lucide-react';
 import { api } from '../api';
 import { PlayerAvatar } from '../components/PlayerCard';
-import { SkeletonStage, EmptyState } from '../components/Feedback';
+import { SkeletonStage, SkeletonRows, EmptyState } from '../components/Feedback';
 import { CountUp } from '../motion';
 
 const bat = (p) => p.career?.batting || {};
@@ -105,7 +105,8 @@ export default function MemberDashboard() {
   const [squad, setSquad] = useState([]);
   const [compareId, setCompareId] = useState('');
   const [other, setOther] = useState(null);
-  const [error, setError] = useState('');
+  const [compareError, setCompareError] = useState('');
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     const raw = localStorage.getItem('cc_member');
@@ -144,22 +145,23 @@ export default function MemberDashboard() {
       return;
     }
     let cancelled = false;
+    setCompareError('');
     Promise.all([api.getPlayer(player.id), api.getPlayer(compareId)])
       .then(([me, teammate]) => {
         if (cancelled) return;
         setPlayer(me);
         setOther(teammate);
       })
-      .catch((e) => setError(e.message));
+      // keep the page; just say this comparison did not load and offer a retry
+      .catch((e) => { if (!cancelled) setCompareError(e.message || 'Could not load this player'); });
     return () => { cancelled = true; };
-  }, [compareId]);
+  }, [compareId, retry]);
 
   function logout() {
     localStorage.removeItem('cc_member');
     navigate('/member-login');
   }
 
-  if (error) return <div className="container section"><EmptyState icon={Users} title="Something went wrong">{error}</EmptyState></div>;
   if (!player) return <SkeletonStage />;
 
   const others = squad.filter((p) => p.id !== player.id);
@@ -188,7 +190,13 @@ export default function MemberDashboard() {
         ))}
       </div>
 
-      {other ? <Duel me={player} other={other} /> : (
+      {compareError && (
+        <div className="inline-error" role="alert">
+          <span>{compareError}. Check your connection and try again.</span>
+          <button type="button" className="btn btn-secondary btn-sm btn-icon" onClick={() => setRetry((n) => n + 1)}><RotateCw size={14} aria-hidden="true" /> Try again</button>
+        </div>
+      )}
+      {other && String(other.id) === String(compareId) ? <Duel me={player} other={other} /> : compareId && !compareError ? <SkeletonRows rows={4} /> : (
         <EmptyState icon={Swords} title="Pick a teammate">Tap a face above to see who is ahead, stat by stat.</EmptyState>
       )}
     </div>
