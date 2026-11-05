@@ -68,7 +68,7 @@ html.motion .section h2[data-reveal].in::before { animation: bar-grow 0.5s var(-
   position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.6) 50%, transparent 60%) no-repeat;
   background-size: 260% 100%; background-position: 160% 0;
-  -webkit-mask: url(/crest.png) center / contain no-repeat; mask: url(/crest.png) center / contain no-repeat;
+  -webkit-mask: url(/crest.webp) center / contain no-repeat; mask: url(/crest.webp) center / contain no-repeat;
   animation: crest-shine 6s ease-in-out 1.8s infinite;
 }
 @keyframes crest-in { from { opacity: 0; transform: scale(0.85); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
@@ -209,6 +209,10 @@ html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-sprin
 .lb-rank.r2 { background: linear-gradient(135deg, #f1f4f8, #b8c2cf); color: #334155; }
 .lb-rank.r3 { background: linear-gradient(135deg, #f3c6a0, #c7814a); color: #4a2a10; }
 .lb-top td { font-weight: 700; }
+/* the whole row opens the player (the name link's hit area is stretched over the row) */
+.lb-row { position: relative; cursor: pointer; }
+.lb-row td a::after { content: ''; position: absolute; inset: 0; }
+.lb-row:hover td { background: #eef7fb; }
 
 /* ---------- admin panel ---------- */
 .admin-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }

@@ -169,7 +169,7 @@ export default function MemberDashboard() {
   return (
     <div className="container section">
       <div className="member-head">
-        <PlayerAvatar player={player} className="member-avatar" />
+        <PlayerAvatar player={player} className="member-avatar" size={96} />
         <div>
           <span className="member-hi">Welcome back</span>
           <h2>{player.name}</h2>
@@ -184,7 +184,7 @@ export default function MemberDashboard() {
           <button key={p.id} type="button" role="option" aria-selected={String(p.id) === String(compareId)}
             className={`mate ${String(p.id) === String(compareId) ? 'on' : ''}`} style={{ '--i': i }}
             onClick={() => setCompareId(String(p.id) === String(compareId) ? '' : String(p.id))}>
-            <PlayerAvatar player={p} className="mate-avatar" />
+            <PlayerAvatar player={p} className="mate-avatar" size={96} />
             <span>{p.name}</span>
           </button>
         ))}

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+Sitemap: https://challenger-cc.vercel.app/sitemap.xml

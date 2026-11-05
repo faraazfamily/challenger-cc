@@ -37,7 +37,7 @@ export default function Home() {
         <div className="container">
           <div className="hero-crest">
             <span className="hero-halo" aria-hidden="true" />
-            <img className="hero-logo" src="/crest.png" alt="The Challengers crest" />
+            <img className="hero-logo" src="/crest.webp" width="148" height="148" alt="The Challengers crest" fetchpriority="high" />
             <span className="hero-shine" aria-hidden="true" />
           </div>
           <h1 className="hero-title">{team?.name || 'The Challengers'}</h1>

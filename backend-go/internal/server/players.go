@@ -38,9 +38,9 @@ func scanPlayerRow(row scanner) (gin.H, error) {
 		"fielding_notes":  nullableString(fieldingNotes),
 		"photo_url":       nullableString(photoURL),
 		"intro_video_url": nullableString(introVideoURL),
-		"is_captain":       isCaptain,
-		"is_vice_captain":  isViceCaptain,
-		"is_wicketkeeper":  isWicketkeeper,
+		"is_captain":      isCaptain,
+		"is_vice_captain": isViceCaptain,
+		"is_wicketkeeper": isWicketkeeper,
 		"joined_date":     nullableDate(joinedDate),
 	}, nil
 }

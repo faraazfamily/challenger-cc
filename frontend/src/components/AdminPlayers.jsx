@@ -217,7 +217,7 @@ export default function AdminPlayers() {
           {filtered.map((p) => (
             // grid row: photo | name + role/badges | jersey | actions, so every column lines up
             <div className="roster-row" key={p.id} data-reveal>
-              <PlayerAvatar player={p} className="squad-avatar" />
+              <PlayerAvatar player={p} className="squad-avatar" size={96} />
               <div className="roster-main">
                 <strong>{p.name}</strong>
                 <div className="roster-meta">

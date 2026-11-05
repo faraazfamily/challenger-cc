@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="container footer-inner">
         <div className="footer-brand">
-          <img src="/crest.png" alt="" width="44" height="44" />
+          <img src="/crest-sm.webp" alt="" width="44" height="44" loading="lazy" />
           <div>
             <strong>The Challengers</strong>
             <span>Play Hard. Play Fair. Challenge Everything.</span>

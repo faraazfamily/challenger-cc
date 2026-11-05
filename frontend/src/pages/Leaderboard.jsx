@@ -25,7 +25,7 @@ function Podium({ rows, col, label }) {
         return (
           <Link key={r.id} to={`/players/${r.id}`} className={`podium-spot p${place}`} style={{ '--k': k }}>
             <span className={`lb-rank r${place}`}>{place}</span>
-            <PlayerAvatar player={withPhoto(r)} className="podium-avatar" />
+            <PlayerAvatar player={withPhoto(r)} className="podium-avatar" size={200} />
             <strong>{r.name}</strong>
             <span className="podium-value">{r[col]}</span>
             <span className="podium-label">{label}</span>
@@ -56,7 +56,7 @@ export default function Leaderboard() {
           </button>
         ))}
       </div>
-      {!data ? <SkeletonRows /> : rows.length === 0 ? (
+      {!data ? <><div className="podium-skel" aria-hidden="true" /><SkeletonRows /></> : rows.length === 0 ? (
         <EmptyState icon={Trophy} title="No numbers yet">Add some match scorecards and the leaders show up here.</EmptyState>
       ) : (
         <>
@@ -72,7 +72,7 @@ export default function Leaderboard() {
             <tbody>
               {rows.map((r, i) => (
                 // keyed by tab, so switching tabs re-plays the row reveal
-                <tr key={`${tab}-${r.id}`} data-reveal className={i < 3 ? 'lb-top' : ''}>
+                <tr key={`${tab}-${r.id}`} data-reveal className={`lb-row ${i < 3 ? 'lb-top' : ''}`}>
                   <td><span className={`lb-rank r${i + 1}`}>{i + 1}</span></td>
                   <td><Link to={`/players/${r.id}`}>{r.name}</Link></td>
                   {activeTab.cols.map(([key]) => <td key={key}>{r[key]}</td>)}

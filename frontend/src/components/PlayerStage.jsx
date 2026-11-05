@@ -9,7 +9,7 @@ import { PlayerAvatar, hasPhoto } from './PlayerCard';
 // Without one, the photo itself walks in from the back of the stage and settles into place.
 export default function PlayerStage({ player }) {
   const video = hasPhoto(player.intro_video_url) ? assetUrl(player.intro_video_url) : null;
-  const poster = hasPhoto(player.photo_url) ? assetUrl(player.photo_url) : undefined;
+  const poster = hasPhoto(player.photo_url) ? assetUrl(player.photo_url, 800) : undefined;
   const videoRef = useRef(null);
   const [take, setTake] = useState(0);
   const [played, setPlayed] = useState(reducedMotion());
@@ -52,7 +52,7 @@ export default function PlayerStage({ player }) {
             </div>
           </div>
         ) : (
-          <PlayerAvatar player={player} className="stage-avatar" />
+          <PlayerAvatar player={player} className="stage-avatar" size={400} eager />
         )}
         <span className="stage-floor" aria-hidden="true" />
       </div>

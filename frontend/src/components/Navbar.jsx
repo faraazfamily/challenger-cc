@@ -33,7 +33,7 @@ export default function Navbar() {
     <header className={`navbar ${scrolled ? 'scrolled' : ''} ${scoring ? 'static' : ''} ${open ? 'menu-open' : ''}`}>
       <div className="container">
         <Link to="/" className="brand">
-          <img className="crest-logo" src="/crest.png" alt="The Challengers crest" />
+          <img className="crest-logo" src="/crest-sm.webp" width="46" height="46" alt="The Challengers crest" />
           <span>The Challengers</span>
         </Link>
         <button className="nav-toggle" type="button" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} onClick={() => setOpen((v) => !v)}>

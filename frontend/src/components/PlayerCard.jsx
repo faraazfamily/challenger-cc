@@ -6,11 +6,12 @@ export function hasPhoto(url) {
   return !!url && url !== 'null' && url !== 'undefined';
 }
 
-export function PlayerAvatar({ player, className = '' }) {
+// size: the largest the avatar is shown at, so the API can send a small image
+export function PlayerAvatar({ player, className = '', size = 200, eager = false }) {
   const [broken, setBroken] = useState(false);
   const initials = (player.name || '?').split(' ').map((n) => n[0]).slice(0, 2).join('');
   if (hasPhoto(player.photo_url) && !broken) {
-    return <img className={className} src={assetUrl(player.photo_url)} alt={player.name} onError={() => setBroken(true)} />;
+    return <img className={className} src={assetUrl(player.photo_url, size)} alt={player.name} width={size} height={size} loading={eager ? 'eager' : 'lazy'} fetchpriority={eager ? 'high' : undefined} decoding="async" onError={() => setBroken(true)} />;
   }
   return <div className={`player-photo-placeholder ${className}`}>{initials}</div>;
 }

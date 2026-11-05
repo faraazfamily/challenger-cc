@@ -159,8 +159,8 @@ tr:hover td { background: #faf9f5; }
 .form-row > .form-group { flex: 1; }
 
 .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
-.badge-won { background: #d6f0e0; color: var(--success); }
-.badge-lost { background: #fbdedb; color: var(--danger); }
+.badge-won { background: #d6f0e0; color: #145c3a; }  /* AA contrast on the light green */
+.badge-lost { background: #fbdedb; color: #9c2a1e; }
 .badge-upcoming { background: #eef0f5; color: var(--text-muted); }
 
 .stat-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }

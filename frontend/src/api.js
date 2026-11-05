@@ -2,8 +2,10 @@ const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 // Photos are served by the API server (/uploads/...), not by the website host,
 // so they need the API address in front when the two live on different domains.
-export function assetUrl(path) {
-  if (path && path.startsWith('/uploads/')) return `${BASE}${path}`;
+// width (96 / 200 / 400 / 800) asks the API for a small JPEG of a photo instead of the
+// full camera file; leave it out for the original (PDFs, videos, downloads).
+export function assetUrl(path, width) {
+  if (path && path.startsWith('/uploads/')) return `${BASE}${path}${width ? `?w=${width}` : ''}`;
   return path;
 }
 

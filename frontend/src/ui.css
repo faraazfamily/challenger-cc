@@ -36,7 +36,7 @@
 
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 18px; }
 .section-head h2 { margin: 0; }
-.section-link { display: inline-flex; align-items: center; gap: 5px; color: var(--gold-light); font-weight: 600; font-size: 0.92rem; white-space: nowrap; }
+.section-link { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 0 4px; margin: -12px -4px; color: var(--gold-light); font-weight: 600; font-size: 0.92rem; white-space: nowrap; } /* 44px tap target without moving the layout */
 .section-link svg { transition: transform 0.2s var(--ease-out); }
 .section-link:hover svg { transform: translateX(3px); }
 
@@ -99,6 +99,9 @@
 .p3 .podium-block { height: 34px; }
 .podium-spot:hover .podium-avatar { transform: scale(1.06); }
 .podium-avatar { transition: transform 0.25s var(--ease-spring); }
+
+.podium-skel { height: 196px; margin: 6px 0 22px; }
+@media (max-width: 720px) { .podium-skel { height: 170px; } }
 
 /* ---------- login boxes ---------- */
 .login-box { animation: modal-in 0.45s var(--ease-spring) backwards; }

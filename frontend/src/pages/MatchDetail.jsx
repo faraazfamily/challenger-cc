@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarDays, MapPin, Trophy } from 'lucide-react';
+import { CalendarDays, MapPin, Trophy, SearchX } from 'lucide-react';
 import { api, cached } from '../api';
-import { SkeletonStage } from '../components/Feedback';
+import { SkeletonStage, EmptyState } from '../components/Feedback';
 
 export default function MatchDetail() {
   const { id } = useParams();
   const [match, setMatch] = useState(() => cached(`/api/matches/${id}`));
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setMatch(cached(`/api/matches/${id}`));
-    api.getMatch(id).then(setMatch).catch(() => {});
+    setError('');
+    api.getMatch(id).then(setMatch).catch((e) => setError(e.message || 'Could not load this match'));
   }, [id]);
 
+  if (!match && error) return <div className="container section"><EmptyState icon={SearchX} title="Match not found">{error}</EmptyState></div>;
   if (!match) return <SkeletonStage />;
 
   // Test matches have 2 innings per side, so show which innings a row belongs to.

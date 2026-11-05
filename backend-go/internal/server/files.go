@@ -81,6 +81,10 @@ func (s *Server) storeImage(fh *multipart.FileHeader) (string, error) {
 			return "", errors.New("that file doesn't look like a photo")
 		}
 	}
+	// Phone photos are huge; keep a sensible size (see images.go).
+	if shrunk, ct, ok := shrinkImage(data, maxUploadSide); ok {
+		return s.storeFile(".jpg", ct, shrunk)
+	}
 	return s.storeFile(filepath.Ext(fh.Filename), contentType, data)
 }
 
@@ -128,6 +132,12 @@ func (s *Server) ServeUpload(c *gin.Context) {
 	var data []byte
 	err := s.DB.QueryRow(`SELECT content_type, data FROM files WHERE name = $1`, name).Scan(&contentType, &data)
 	if err == nil {
+		// ?w=200 etc.: a small JPEG for avatars and cards instead of the full photo
+		if w, _ := strconv.Atoi(c.Query("w")); allowedWidths[w] && strings.HasPrefix(contentType, "image/") {
+			if small, ct, vErr := s.resizedVariant(name, w, data); vErr == nil {
+				data, contentType = small, ct
+			}
+		}
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("Content-Type", contentType)
