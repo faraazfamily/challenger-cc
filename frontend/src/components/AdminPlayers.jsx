@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Plus, Pencil, Trash2, Clapperboard } from 'lucide-react';
 import { api, assetUrl } from '../api';
 import { prepareIntroVideo } from './introVideo';
 import { PlayerAvatar } from './PlayerCard';
@@ -189,7 +190,7 @@ export default function AdminPlayers() {
     <div>
       <div className="squad-toolbar">
         <h3>Squad ({filtered.length})</h3>
-        <button className="btn btn-primary" type="button" onClick={openAdd}>Add Player</button>
+        <button className="btn btn-primary btn-icon" type="button" onClick={openAdd}><Plus size={17} aria-hidden="true" /> Add Player</button>
       </div>
 
       <div className="filter-bar">
@@ -221,11 +222,11 @@ export default function AdminPlayers() {
               <div className="squad-row-main">
                 <strong>{p.name} {p.is_captain ? '★' : ''}{p.is_vice_captain ? ' VC' : ''}{p.is_wicketkeeper ? ' WK' : ''}</strong>
                 <span className="role-tag">{p.role}</span>
-                {p.intro_video_url && <span className="squad-clip" title="Has an intro video">🎬</span>}
+                {p.intro_video_url && <span className="squad-clip" title="Has an intro video"><Clapperboard size={15} /></span>}
               </div>
               <div className="squad-actions">
-                <button className="btn btn-secondary btn-sm" type="button" onClick={() => startEdit(p)}>Edit</button>
-                <button className="btn btn-danger btn-sm" type="button" onClick={() => handleDelete(p.id)}>Delete</button>
+                <button className="btn btn-secondary btn-sm btn-icon" type="button" onClick={() => startEdit(p)}><Pencil size={14} aria-hidden="true" /> Edit</button>
+                <button className="btn btn-danger btn-sm btn-icon" type="button" onClick={() => handleDelete(p.id)}><Trash2 size={14} aria-hidden="true" /> Delete</button>
               </div>
             </div>
           ))}
@@ -300,7 +301,7 @@ export default function AdminPlayers() {
                   <video className="clip-preview" src={clipUrl || assetUrl(form.existing_intro_video_url)} muted playsInline autoPlay loop controls />
                 ) : (
                   <button type="button" className="clip-empty" onClick={() => clipInput.current?.click()} disabled={!!clipStatus}>
-                    <span className="clip-icon">🎬</span>
+                    <span className="clip-icon"><Clapperboard size={30} aria-hidden="true" /></span>
                     <span>{clipStatus || 'Video chuno ya record karo'}</span>
                   </button>
                 )}

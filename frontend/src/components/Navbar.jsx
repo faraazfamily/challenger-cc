@@ -1,30 +1,54 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Home, Users, CalendarDays, Trophy, UserRound, LayoutDashboard, ShieldCheck, LogIn, Menu, X } from 'lucide-react';
 import { isLoggedIn } from '../api';
 
 export default function Navbar() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [open, setOpen] = useState(false);
-  const link = (to, label) => (
-    <Link to={to} className={pathname === to ? 'active' : ''} onClick={() => setOpen(false)}>{label}</Link>
-  );
+  const [scrolled, setScrolled] = useState(false);
+
+  // Glass + shadow once the page scrolls; close the phone menu on every page change.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => { setOpen(false); }, [pathname, search]);
+
+  // While a match is being scored the bar scrolls away, leaving the screen to the run keys.
+  const scoring = pathname === '/admin' && /[?&](live|new|view)=/.test(search);
+  const member = localStorage.getItem('cc_member');
+  const links = [
+    ['/', 'Home', Home],
+    ['/players', 'Players', Users],
+    ['/matches', 'Matches', CalendarDays],
+    ['/leaderboard', 'Leaderboard', Trophy],
+    member ? ['/me', 'My Dashboard', LayoutDashboard] : ['/member-login', 'Member Login', UserRound],
+    isLoggedIn() ? ['/admin', 'Admin', ShieldCheck] : ['/login', 'Admin Login', LogIn],
+  ];
+
   return (
-    <header className="navbar">
+    <header className={`navbar ${scrolled ? 'scrolled' : ''} ${scoring ? 'static' : ''} ${open ? 'menu-open' : ''}`}>
       <div className="container">
-        <Link to="/" className="brand" onClick={() => setOpen(false)}>
+        <Link to="/" className="brand">
           <img className="crest-logo" src="/crest.png" alt="The Challengers crest" />
-          The Challengers
+          <span>The Challengers</span>
         </Link>
-        <button className="nav-toggle" type="button" aria-label="Menu" onClick={() => setOpen((v) => !v)}>
-          {open ? 'Close' : 'Menu'}
+        <button className="nav-toggle" type="button" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          {open ? <X size={22} /> : <Menu size={22} />}
         </button>
         <nav className={open ? 'open' : ''}>
-          {link('/', 'Home')}
-          {link('/players', 'Players')}
-          {link('/matches', 'Matches')}
-          {link('/leaderboard', 'Leaderboard')}
-          {localStorage.getItem('cc_member') ? link('/me', 'My Dashboard') : link('/member-login', 'Member Login')}
-          {isLoggedIn() ? link('/admin', 'Admin') : link('/login', 'Admin Login')}
+          {links.map(([to, label, Icon]) => {
+            const active = to === '/' ? pathname === '/' : pathname.startsWith(to);
+            return (
+              <Link key={to} to={to} className={active ? 'active' : ''}>
+                <Icon size={17} strokeWidth={2.2} aria-hidden="true" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </header>

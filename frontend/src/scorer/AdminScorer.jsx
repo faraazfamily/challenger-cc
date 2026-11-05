@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { matchTitle } from './engine';
@@ -38,7 +39,7 @@ function History({ items, archived, setArchived, onOpen, onArchive, onDelete }) 
         <label className="sc-check"><input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} /> Show archived</label>
       </div>
       {items.length === 0 ? (
-        <div className="empty-state">{archived ? 'No archived matches.' : 'No matches yet. Tap "+ New match" to start scoring.'}</div>
+        <div className="empty-state">{archived ? 'No archived matches.' : 'No matches yet. Tap "New match" to start scoring.'}</div>
       ) : items.map((h) => (
         <div className="card sc-hist" key={h.id}>
           <button type="button" className="sc-hist-main" onClick={() => onOpen(h)}>
@@ -264,7 +265,7 @@ export default function AdminScorer() {
     <div>
       <div className="squad-toolbar">
         <h3>Scorer</h3>
-        <button className="btn btn-primary" onClick={() => go({ new: 1 })}>+ New match</button>
+        <button className="btn btn-primary btn-icon" onClick={() => go({ new: 1 })}><Plus size={17} aria-hidden="true" /> New match</button>
       </div>
       <div className="sc-atabs sc-hometabs">
         {HOME_TABS.map(([k, l]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}

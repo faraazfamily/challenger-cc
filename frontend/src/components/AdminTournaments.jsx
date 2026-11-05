@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { api } from '../api';
 
 const BLANK = { name: '', year: '', start_date: '', end_date: '' };
@@ -85,7 +86,7 @@ export default function AdminTournaments() {
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <button className="btn btn-primary" type="button" onClick={startAdd}>Add</button>
+        <button className="btn btn-primary btn-icon" type="button" onClick={startAdd}><Plus size={17} aria-hidden="true" /> Add</button>
       </div>
 
       {showForm && (
@@ -130,8 +131,8 @@ export default function AdminTournaments() {
               <div style={{ fontSize: '0.88rem', color: '#6b7280', marginBottom: 14 }}>
                 {t.start_date || '—'} → {t.end_date || '—'}
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => startEdit(t)}>Edit</button>{' '}
-              <button className="btn btn-danger btn-sm" onClick={() => handleDelete(t.id)}>Delete</button>
+              <button className="btn btn-secondary btn-sm btn-icon" onClick={() => startEdit(t)}><Pencil size={14} aria-hidden="true" /> Edit</button>{' '}
+              <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(t.id)}><Trash2 size={14} aria-hidden="true" /> Delete</button>
             </div>
           ))}
         </div>

@@ -22,7 +22,7 @@
 }
 .sc-board-top { display: flex; justify-content: space-between; gap: 8px; color: #c9d3e8; font-size: 0.85rem; }
 .sc-format { background: var(--gold); color: #071018; font-weight: 800; padding: 2px 10px; border-radius: 20px; }
-.sc-teams { font-family: Georgia, serif; font-size: 1.05rem; margin: 10px 0 2px; color: #fff; }
+.sc-teams { font-family: var(--font-display); letter-spacing: 0.3px; font-size: 1.05rem; margin: 10px 0 2px; color: #fff; }
 .sc-score { font-size: 3rem; font-weight: 800; line-height: 1.1; color: var(--gold-light); }
 .sc-score small { font-size: 1.6rem; color: #fff; }
 .sc-overs { font-size: 1rem; font-weight: 600; color: #c9d3e8; }

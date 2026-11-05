@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Home from './pages/Home';
 import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
@@ -27,9 +28,7 @@ export default function App() {
         <Route path="/me" element={<MemberDashboard />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>
-      <footer className="footer">
-        The Challengers Cricket Club &copy; {new Date().getFullYear()}
-      </footer>
+      <Footer />
     </>
   );
 }

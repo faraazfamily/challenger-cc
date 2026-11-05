@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Users, CalendarDays, ClipboardList, Trophy, FileUp, LogOut } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, isLoggedIn } from '../api';
 import { CountUp } from '../motion';
@@ -9,8 +10,9 @@ import AdminScorecard from '../components/AdminScorecard';
 import AdminScorer from '../scorer/AdminScorer';
 
 const TABS = ['Players', 'Matches', 'Scorer', 'Tournaments', 'Upload Scorecard'];
-const ICONS = { Players: '👥', Matches: '🏏', Scorer: '📋', Tournaments: '🏆', 'Upload Scorecard': '📄' };
+const ICONS = { Players: Users, Matches: CalendarDays, Scorer: ClipboardList, Tournaments: Trophy, 'Upload Scorecard': FileUp };
 const slug = (t) => t.toLowerCase().replace(/ /g, '-');
+const TabIcon = ({ name, ...rest }) => { const Icon = ICONS[name]; return <Icon aria-hidden="true" {...rest} />; };
 
 // Username from the login token, for the greeting (display only; the server checks the token).
 function adminName() {
@@ -46,7 +48,7 @@ function Summary({ setTab }) {
       {tiles.map(([tab, key, label], i) => (
         <button key={key} type="button" className={`admin-tile ${key === 'live' && n.live ? 'is-live' : ''}`}
           style={{ '--i': i }} onClick={() => setTab(tab)}>
-          <span className="admin-tile-icon" aria-hidden="true">{ICONS[tab]}</span>
+          <span className="admin-tile-icon" aria-hidden="true"><TabIcon name={tab} size={20} /></span>
           <strong>{n[key] == null ? '–' : <CountUp value={n[key]} />}</strong>
           <span>{key === 'matches' ? 'Matches' : label}</span>
           {key === 'matches' && n.matches != null && <em>{label}</em>}
@@ -68,7 +70,10 @@ export default function Admin() {
 
   // On a phone the tab strip scrolls sideways: bring the open tab into view after a refresh.
   useEffect(() => {
-    document.querySelector('.admin-tabs .stat-tab.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    // scroll only the strip sideways (scrollIntoView would also move the page under the sticky bar)
+    const strip = document.querySelector('.admin-tabs');
+    const active = strip?.querySelector('.stat-tab.active');
+    if (strip && active) strip.scrollLeft = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
   }, [tab, focus]);
   const navigate = useNavigate();
 
@@ -91,13 +96,13 @@ export default function Admin() {
           <h2>Admin Panel</h2>
           <p className="admin-hello">Welcome back, <strong>{adminName()}</strong></p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={logout}>Log Out</button>
+        <button className="btn btn-secondary btn-sm btn-icon" onClick={logout}><LogOut size={15} aria-hidden="true" /> Log out</button>
       </div>
       <Summary setTab={setTab} />
       <div className="stat-tabs admin-tabs">
         {TABS.map((t) => (
           <button key={t} type="button" className={`stat-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            <span className="admin-tab-icon" aria-hidden="true">{ICONS[t]}</span>{t}
+            <TabIcon name={t} size={16} className="admin-tab-icon" />{t}
           </button>
         ))}
       </div>

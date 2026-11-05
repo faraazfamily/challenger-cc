@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { CalendarDays, MapPin, Trophy } from 'lucide-react';
 import { api, cached } from '../api';
+import { SkeletonStage } from '../components/Feedback';
 
 export default function MatchDetail() {
   const { id } = useParams();
@@ -11,23 +13,39 @@ export default function MatchDetail() {
     api.getMatch(id).then(setMatch).catch(() => {});
   }, [id]);
 
-  if (!match) return <div className="container section empty-state">Loading...</div>;
+  if (!match) return <SkeletonStage />;
 
   // Test matches have 2 innings per side, so show which innings a row belongs to.
   const multi = match.batting.some((b) => b.innings_no > 1) || match.bowling.some((b) => b.innings_no > 1);
 
   return (
     <div className="container section">
-      <h2>vs {match.opponent}</h2>
+      {/* scoreboard header: both totals side by side, result and match details */}
+      <section className="match-hero">
+        <div className="match-hero-top">
+          <span className={`badge ${match.result === 'Won' ? 'badge-won' : match.result === 'Lost' ? 'badge-lost' : 'badge-upcoming'}`}>{match.result}</span>
+          <span className="match-meta"><CalendarDays size={15} aria-hidden="true" />{new Date(match.match_date).toLocaleDateString()}</span>
+          <span className="match-meta"><MapPin size={15} aria-hidden="true" />{match.venue || 'Venue TBD'}</span>
+          <span className="match-meta"><Trophy size={15} aria-hidden="true" />{match.tournament_name || 'Friendly'}</span>
+        </div>
+        <div className="match-teams">
+          <div className={`match-team ${match.result === 'Won' ? 'winner' : ''}`}>
+            <span>The Challengers</span>
+            <strong>{match.our_score || '—'}</strong>
+          </div>
+          <div className="match-vs">VS</div>
+          <div className={`match-team right ${match.result === 'Lost' ? 'winner' : ''}`}>
+            <span>{match.opponent}</span>
+            <strong>{match.opponent_score || '—'}</strong>
+          </div>
+        </div>
+        {match.result_note && <p className="match-note">{match.result_note}</p>}
+      </section>
       {match.in_records === false && (
         <div className="review-note">This match is not counted in player stats, the leaderboard or the team record.</div>
       )}
-      <p style={{ color: '#6b7280' }}>
-        {new Date(match.match_date).toLocaleDateString()} · {match.venue || 'Venue TBD'} · {match.tournament_name || 'Friendly'}
-      </p>
-      <p><strong>{match.our_score}</strong> {match.opponent_score ? `vs ${match.opponent_score}` : ''} — <strong>{match.result_note || match.result}</strong></p>
 
-      <h3>Batting</h3>
+      <h3 data-reveal>Batting</h3>
       <div className="card" style={{ marginBottom: 24 }}>
         <table>
           <thead><tr><th>Player</th>{multi && <th>Inn</th>}<th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>Dismissal</th></tr></thead>
@@ -44,7 +62,7 @@ export default function MatchDetail() {
         </table>
       </div>
 
-      <h3>Bowling</h3>
+      <h3 data-reveal>Bowling</h3>
       <div className="card">
         <table>
           <thead><tr><th>Player</th>{multi && <th>Inn</th>}<th>Overs</th><th>Maidens</th><th>Runs</th><th>Wickets</th></tr></thead>

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, cached } from '../api';
+import { UserX } from 'lucide-react';
 import PlayerStage from '../components/PlayerStage';
+import { SkeletonStage, EmptyState } from '../components/Feedback';
 
 export default function PlayerProfile() {
   const { id } = useParams();
@@ -13,8 +15,8 @@ export default function PlayerProfile() {
     api.getPlayer(id).then(setPlayer).catch((e) => setError(e.message));
   }, [id]);
 
-  if (error) return <div className="container section empty-state">{error}</div>;
-  if (!player) return <div className="container section empty-state">Loading...</div>;
+  if (error && !player) return <div className="container section"><EmptyState icon={UserX} title="Player not found">{error}</EmptyState></div>;
+  if (!player) return <SkeletonStage />;
 
   return (
     <div className="container section">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 
@@ -22,6 +23,7 @@ export default function MemberLogin() {
   return (
     <div className="container">
       <form className="card login-box" onSubmit={handleSubmit}>
+        <span className="login-icon"><UserRound size={26} aria-hidden="true" /></span>
         <h2>Member Login</h2>
         <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Enter the name on the team list. No password needed.</p>
         <div className="form-group">

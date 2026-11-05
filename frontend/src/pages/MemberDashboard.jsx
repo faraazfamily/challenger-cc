@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { PlayerAvatar } from '../components/PlayerCard';
+import { SkeletonStage } from '../components/Feedback';
 
 const ROWS = [
   { key: 'runs', label: 'Runs', higher: true, pick: (p) => p.career.batting.runs },
@@ -151,7 +152,7 @@ export default function MemberDashboard() {
   }
 
   if (error) return <div className="container section empty-state">{error}</div>;
-  if (!player) return <div className="container section empty-state">Loading...</div>;
+  if (!player) return <SkeletonStage />;
 
   const others = squad.filter((p) => p.id !== player.id);
 

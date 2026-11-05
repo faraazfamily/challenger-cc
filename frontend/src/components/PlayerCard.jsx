@@ -15,9 +15,29 @@ export function PlayerAvatar({ player, className = '' }) {
   return <div className={`player-photo-placeholder ${className}`}>{initials}</div>;
 }
 
+// Desktop only: the card tilts a few degrees toward the pointer (ui.css .tilt).
+function tiltHandlers() {
+  if (typeof window === 'undefined' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return {};
+  return {
+    onPointerMove: (e) => {
+      const el = e.currentTarget;
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      el.classList.add('tilt');
+      el.style.setProperty('--ry', `${(x * 10).toFixed(2)}deg`);
+      el.style.setProperty('--rx', `${(-y * 10).toFixed(2)}deg`);
+    },
+    onPointerLeave: (e) => {
+      e.currentTarget.classList.remove('tilt');
+    },
+  };
+}
+
 export default function PlayerCard({ player }) {
   return (
-    <Link to={`/players/${player.id}`} className="card player-card">
+    <Link to={`/players/${player.id}`} className="card player-card" {...tiltHandlers()}>
       {/* the avatar "walks in" toward the screen when the card scrolls into view (motion.css) */}
       <div className="pc-stage">
         <PlayerAvatar player={player} className="pc-avatar" />

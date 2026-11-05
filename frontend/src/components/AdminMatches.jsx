@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { api } from '../api';
 
 export default function AdminMatches() {
@@ -48,7 +49,7 @@ export default function AdminMatches() {
                       <span className="switch-label">{m.in_records ? 'Counted' : 'Not counted'}</span>
                     </button>
                   </td>
-                  <td className="am-del"><button className="btn btn-danger btn-sm" onClick={() => handleDelete(m.id)}>Delete</button></td>
+                  <td className="am-del"><button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(m.id)}><Trash2 size={14} aria-hidden="true" /> Delete</button></td>
                 </tr>
               ))}
             </tbody>
