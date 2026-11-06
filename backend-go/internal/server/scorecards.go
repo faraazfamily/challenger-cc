@@ -45,16 +45,13 @@ func (s *Server) UploadScorecard(c *gin.Context) {
 		return
 	}
 
-	if _, err := s.DB.Exec(
-		`INSERT INTO scorecards (match_id, pdf_url, raw_text, is_reviewed) VALUES ($1,$2,$3,false)`,
-		matchID, pdfURL, result.RawText,
-	); err != nil {
+	if _, err := s.DB.Exec(`CALL sp_scorecard_insert($1, $2, $3, false, NULL)`, matchID, pdfURL, result.RawText); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save scorecard record"})
 		return
 	}
 
 	// Fuzzy-match suggested names to existing players (case-insensitive substring match).
-	rows, err := s.DB.Query(`SELECT id, name FROM players`)
+	rows, err := s.DB.Query(`SELECT * FROM fn_player_names()`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load players for matching"})
 		return
@@ -144,7 +141,7 @@ func (s *Server) ImportScorecard(c *gin.Context) {
 	sum := sha256.Sum256(fileBytes)
 	contentHash := hex.EncodeToString(sum[:])
 	var already int
-	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM scorecards WHERE content_hash = $1`, contentHash).Scan(&already); err != nil {
+	if err := s.DB.QueryRow(`SELECT fn_scorecard_hash_count($1)`, contentHash).Scan(&already); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for a duplicate scorecard"})
 		return
 	}
@@ -153,7 +150,7 @@ func (s *Server) ImportScorecard(c *gin.Context) {
 		return
 	}
 
-	prows, err := s.DB.Query(`SELECT id, name FROM players`)
+	prows, err := s.DB.Query(`SELECT * FROM fn_player_names()`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load players"})
 		return
@@ -257,38 +254,28 @@ func (s *Server) ImportScorecard(c *gin.Context) {
 
 	var matchID int
 	err = tx.QueryRow(
-		`INSERT INTO matches (opponent, match_date, our_score, opponent_score, result)
-		 VALUES ($1, CURRENT_DATE, $2, $3, $4) RETURNING id`,
+		`CALL sp_match_create(NULL, $1, NULL, NULL, $2, $3, $4, NULL, TRUE, NULL)`,
 		opponent, nullify(ourScore), nullify(oppScore), matchResult,
 	).Scan(&matchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create match from the PDF"})
 		return
 	}
-	if _, err := tx.Exec(
-		`INSERT INTO scorecards (match_id, pdf_url, raw_text, is_reviewed, content_hash) VALUES ($1,$2,$3,true,$4)`,
-		matchID, pdfURL, result.RawText, contentHash,
-	); err != nil {
+	if _, err := tx.Exec(`CALL sp_scorecard_insert($1, $2, $3, true, $4)`, matchID, pdfURL, result.RawText, contentHash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save scorecard record"})
 		return
 	}
 	for id, row := range battingSaved {
-		if _, err := tx.Exec(
-			`INSERT INTO batting_stats (match_id, player_id, runs, balls_faced, fours, sixes, is_out)
-			 VALUES ($1,$2,$3,$4,$5,$6,true)`,
-			matchID, id, row.Runs, row.BallsFaced, row.Fours, row.Sixes,
-		); err != nil {
+		if _, err := tx.Exec(`CALL sp_batting_insert($1, $2, 1, $3, $4, $5, $6, true, NULL)`,
+			matchID, id, row.Runs, row.BallsFaced, row.Fours, row.Sixes); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save batting stats"})
 			return
 		}
 		saved = append(saved, gin.H{"name": row.Name, "kind": "batting", "runs": row.Runs, "balls": row.BallsFaced})
 	}
 	for id, row := range bowlingSaved {
-		if _, err := tx.Exec(
-			`INSERT INTO bowling_stats (match_id, player_id, overs, maidens, runs_conceded, wickets)
-			 VALUES ($1,$2,$3,$4,$5,$6)`,
-			matchID, id, row.Overs, row.Maidens, row.RunsConceded, row.Wickets,
-		); err != nil {
+		if _, err := tx.Exec(`CALL sp_bowling_insert($1, $2, 1, $3, $4, $5, $6)`,
+			matchID, id, row.Overs, row.Maidens, row.RunsConceded, row.Wickets); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save bowling stats"})
 			return
 		}
@@ -313,10 +300,7 @@ func (s *Server) ImportScorecard(c *gin.Context) {
 
 // GET /api/scorecards/:matchId
 func (s *Server) GetScorecards(c *gin.Context) {
-	rows, err := s.DB.Query(
-		`SELECT id, match_id, pdf_url, is_reviewed, uploaded_at FROM scorecards WHERE match_id = $1 ORDER BY uploaded_at DESC`,
-		c.Param("matchId"),
-	)
+	rows, err := s.DB.Query(`SELECT * FROM fn_scorecards($1)`, c.Param("matchId"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch scorecards"})
 		return

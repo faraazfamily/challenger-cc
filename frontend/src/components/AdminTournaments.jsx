@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useDialog } from './Dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { api } from '../api';
 import { SkeletonRows } from './Feedback';
@@ -15,6 +16,7 @@ function toPayload(form) {
 }
 
 export default function AdminTournaments() {
+  const { confirm, prompt: ask, toast } = useDialog();
   const [tournaments, setTournaments] = useState(null); // null = still loading
   const [form, setForm] = useState(BLANK);
   const [showForm, setShowForm] = useState(false);
@@ -61,8 +63,13 @@ export default function AdminTournaments() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this tournament?')) return;
-    await api.deleteTournament(id);
+    if (!await confirm({ title: 'Delete this tournament?', message: 'Matches stay; they just lose the tournament tag.', confirmLabel: 'Delete', danger: true })) return;
+    try {
+      await api.deleteTournament(id);
+      toast('Tournament deleted', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
     load();
   }
 

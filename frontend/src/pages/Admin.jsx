@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, CalendarDays, ClipboardList, Trophy, FileUp, LogOut } from 'lucide-react';
+import { Users, CalendarDays, ClipboardList, Trophy, FileUp, LogOut, KeyRound } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, isLoggedIn } from '../api';
 import { CountUp } from '../motion';
@@ -8,9 +8,10 @@ import AdminMatches from '../components/AdminMatches';
 import AdminTournaments from '../components/AdminTournaments';
 import AdminScorecard from '../components/AdminScorecard';
 import AdminScorer from '../scorer/AdminScorer';
+import AdminAccount from '../components/AdminAccount';
 
-const TABS = ['Players', 'Matches', 'Scorer', 'Tournaments', 'Upload Scorecard'];
-const ICONS = { Players: Users, Matches: CalendarDays, Scorer: ClipboardList, Tournaments: Trophy, 'Upload Scorecard': FileUp };
+const TABS = ['Players', 'Matches', 'Scorer', 'Tournaments', 'Upload Scorecard', 'Account'];
+const ICONS = { Players: Users, Matches: CalendarDays, Scorer: ClipboardList, Tournaments: Trophy, 'Upload Scorecard': FileUp, Account: KeyRound };
 const slug = (t) => t.toLowerCase().replace(/ /g, '-');
 const TabIcon = ({ name, ...rest }) => { const Icon = ICONS[name]; return <Icon aria-hidden="true" {...rest} />; };
 
@@ -115,6 +116,7 @@ export default function Admin() {
         {tab === 'Scorer' && <AdminScorer />}
         {tab === 'Tournaments' && <AdminTournaments />}
         {tab === 'Upload Scorecard' && <AdminScorecard />}
+        {tab === 'Account' && <AdminAccount />}
       </div>
     </div>
   );

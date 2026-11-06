@@ -10,9 +10,10 @@ import (
 	"challenger-cc-backend/internal/db"
 )
 
-// Creates the admin user, or resets its password if it already exists.
+// Sets the admin's login. With exactly one admin in the database that admin is renamed and gets
+// the new password; otherwise the username is created or its password reset.
 //
-//	DATABASE_URL=<your cloud db url> go run ./cmd/setadmin admin "MyNewStrongPassword"
+//	DATABASE_URL=<your cloud db url> go run ./cmd/setadmin Faraaz "MyNewStrongPassword"
 //
 // Reads DATABASE_URL from the environment only (never from .env), so it can't
 // accidentally touch your local database.
@@ -35,11 +36,19 @@ func main() {
 	db.Connect(dsn)
 	defer db.Pool.Close()
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		log.Fatalf("failed to hash password: %v", err)
 	}
-	if _, err := db.Pool.Exec(
+	var count int
+	if err := db.Pool.QueryRow(`SELECT COUNT(*) FROM admins`).Scan(&count); err != nil {
+		log.Fatalf("failed to count admins: %v", err)
+	}
+	if count == 1 {
+		if _, err := db.Pool.Exec(`UPDATE admins SET username = $1, password_hash = $2`, username, string(hash)); err != nil {
+			log.Fatalf("failed to save admin: %v", err)
+		}
+	} else if _, err := db.Pool.Exec(
 		`INSERT INTO admins (username, password_hash) VALUES ($1,$2)
 		 ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash`,
 		username, string(hash),

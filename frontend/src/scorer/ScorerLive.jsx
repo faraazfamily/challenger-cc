@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDialog } from '../components/Dialog';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import * as E from './engine';
@@ -68,6 +69,7 @@ const buzz = () => { try { navigator.vibrate?.(12); } catch { /* not supported *
 const NO_EXTRAS = { wd: false, nb: false, b: false, lb: false, w: false };
 
 export default function ScorerLive({ initial, serverId, onExit }) {
+  const { confirm, prompt: ask, toast } = useDialog();
   const [match, setMatch] = useState(initial);
   const [ex, setEx] = useState(NO_EXTRAS);
   const [squad, setSquad] = useState([]);
@@ -167,9 +169,9 @@ export default function ScorerLive({ initial, serverId, onExit }) {
     }));
     setEx(NO_EXTRAS); setModal(null);
   }
-  function rename(team, pid, current) {
-    const n = prompt('Change player name', current);
-    if (n && n.trim()) commit(E.renamePlayer(match, team, pid, n));
+  async function rename(team, pid, current) {
+    const n = await ask({ title: 'Change player name', value: current, confirmLabel: 'Rename' });
+    if (n) commit(E.renamePlayer(match, team, pid, n));
   }
   const openMore = () => { setMore({ view: 'menu', pen: 5, rt: sum.target ?? '', ro: sum.limit ?? '', note: '' }); setModal('more'); };
   const closeModal = () => { setModal(null); setError(''); };
@@ -177,7 +179,7 @@ export default function ScorerLive({ initial, serverId, onExit }) {
   async function finish() {
     const payload = { ...E.buildFinishPayload(match), in_records: inRecords };
     if (payload.batting.length + payload.bowling.length === 0
-      && !confirm('None of the players in this match are linked to your squad, so no player stats will be saved. Save the match anyway?')) return;
+      && !await confirm({ title: 'Save without player stats?', message: 'None of the players in this match are linked to your squad, so no career stats will be saved.', confirmLabel: 'Save anyway' })) return;
     setBusy(true); setError('');
     try {
       const { buildPdf } = await import('./pdf.js');
@@ -461,9 +463,9 @@ export default function ScorerLive({ initial, serverId, onExit }) {
               <button className="sc-pick" onClick={() => setMore({ ...more, view: 'retire' })}>Retire a batter</button>
               <button className="sc-pick" onClick={() => setMore({ ...more, view: 'bowler' })}>Change bowler mid-over</button>
               {cfg.inningsPerSide === 2 && last < 3 && (
-                <button className="sc-pick" onClick={() => { if (confirm('Declare the innings?')) { push({ t: 'declare' }); closeModal(); } }}>Declare innings</button>
+                <button className="sc-pick" onClick={async () => { if (await confirm({ title: 'Declare the innings?', confirmLabel: 'Declare' })) { push({ t: 'declare' }); closeModal(); } }}>Declare innings</button>
               )}
-              <button className="sc-pick" onClick={() => { if (confirm(last === E.totalInnings(match) - 1 && cfg.inningsPerSide === 2 ? 'End the final innings now? The match will be a draw if the target is not reached.' : 'Close this innings now (rain / time)?')) { push({ t: 'end' }); closeModal(); } }}>End innings (time / rain)</button>
+              <button className="sc-pick" onClick={async () => { if (await confirm({ title: 'End this innings now?', message: last === E.totalInnings(match) - 1 && cfg.inningsPerSide === 2 ? 'The match will be a draw if the target is not reached.' : 'For rain or time. The innings closes where it stands.', confirmLabel: 'End innings', danger: true })) { push({ t: 'end' }); closeModal(); } }}>End innings (time / rain)</button>
               {sum.target !== null && cfg.overs && <button className="sc-pick" onClick={() => setMore({ ...more, view: 'revise' })}>Revise target (rain / D-L)</button>}
               <button className="sc-pick" onClick={() => setMore({ ...more, view: 'endmatch' })}>End match: draw / tie / abandoned / result</button>
             </div>

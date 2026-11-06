@@ -45,11 +45,9 @@ func scanPlayerRow(row scanner) (gin.H, error) {
 	}, nil
 }
 
-const playerColumns = `id, name, role, batting_style, bowling_style, jersey_number, bio, fielding_notes, photo_url, is_captain, is_vice_captain, is_wicketkeeper, joined_date, intro_video_url`
-
 // GET /api/players
 func (s *Server) GetPlayers(c *gin.Context) {
-	rows, err := s.DB.Query(`SELECT ` + playerColumns + ` FROM players ORDER BY is_captain DESC, is_vice_captain DESC, name ASC`)
+	rows, err := s.DB.Query(`SELECT * FROM fn_players()`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch players"})
 		return
@@ -71,7 +69,7 @@ func (s *Server) GetPlayers(c *gin.Context) {
 func (s *Server) GetPlayer(c *gin.Context) {
 	id := c.Param("id")
 
-	row := s.DB.QueryRow(`SELECT `+playerColumns+` FROM players WHERE id = $1`, id)
+	row := s.DB.QueryRow(`SELECT * FROM fn_player($1)`, id)
 	player, err := scanPlayerRow(row)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Player not found"})
@@ -92,12 +90,7 @@ func (s *Server) GetPlayer(c *gin.Context) {
 // attachCareer adds the same live career batting/bowling block used by GET /api/players/:id.
 func (s *Server) attachCareer(player gin.H, id interface{}) error {
 	var innings, totalBalls, timesOut, totalFours, totalSixes, totalRuns, highestScore int
-	err := s.DB.QueryRow(`
-		SELECT COUNT(*), COALESCE(SUM(runs),0), COALESCE(SUM(balls_faced),0), COALESCE(MAX(runs),0),
-		       COUNT(*) FILTER (WHERE is_out = true), COALESCE(SUM(fours),0), COALESCE(SUM(sixes),0)
-		FROM batting_stats WHERE player_id = $1
-		  AND match_id IN (SELECT id FROM matches WHERE in_records)`, id,
-	).Scan(&innings, &totalRuns, &totalBalls, &highestScore, &timesOut, &totalFours, &totalSixes)
+	err := s.DB.QueryRow(`SELECT * FROM fn_player_career_batting($1)`, id).Scan(&innings, &totalRuns, &totalBalls, &highestScore, &timesOut, &totalFours, &totalSixes)
 	if err != nil {
 		return err
 	}
@@ -115,12 +108,7 @@ func (s *Server) attachCareer(player gin.H, id interface{}) error {
 
 	var inningsBowled, totalWickets, totalMaidens int
 	var totalOvers, totalRunsConceded float64
-	err = s.DB.QueryRow(`
-		SELECT COUNT(*), COALESCE(SUM(overs),0), COALESCE(SUM(runs_conceded),0),
-		       COALESCE(SUM(wickets),0), COALESCE(SUM(maidens),0)
-		FROM bowling_stats WHERE player_id = $1
-		  AND match_id IN (SELECT id FROM matches WHERE in_records)`, id,
-	).Scan(&inningsBowled, &totalOvers, &totalRunsConceded, &totalWickets, &totalMaidens)
+	err = s.DB.QueryRow(`SELECT * FROM fn_player_career_bowling($1)`, id).Scan(&inningsBowled, &totalOvers, &totalRunsConceded, &totalWickets, &totalMaidens)
 	if err != nil {
 		return err
 	}
@@ -182,23 +170,12 @@ func (s *Server) otherLeader(wantCaptain, wantVice bool, exceptID string) (strin
 	if !wantCaptain && !wantVice {
 		return "", nil
 	}
-	query := `SELECT name FROM players WHERE is_vice_captain = true`
-	message := "%s is already vice-captain. Remove that role first."
+	role, message := "vice", "%s is already vice-captain. Remove that role first."
 	if wantCaptain {
-		query = `SELECT name FROM players WHERE is_captain = true`
-		message = "%s is already captain. Remove that role first."
+		role, message = "captain", "%s is already captain. Remove that role first."
 	}
-	var name string
-	var err error
-	if exceptID != "" {
-		err = s.DB.QueryRow(query+` AND id <> $1 LIMIT 1`, exceptID).Scan(&name)
-	} else {
-		err = s.DB.QueryRow(query + ` LIMIT 1`).Scan(&name)
-	}
-	if err == sql.ErrNoRows {
-		return "", nil
-	}
-	if err != nil {
+	name, err := s.roleHolder(role, exceptID)
+	if err != nil || name == "" {
 		return "", err
 	}
 	return fmt.Sprintf(message, name), nil
@@ -208,21 +185,20 @@ func (s *Server) otherKeeper(want bool, exceptID string) (string, error) {
 	if !want {
 		return "", nil
 	}
-	query := `SELECT name FROM players WHERE is_wicketkeeper = true`
-	var name string
-	var err error
-	if exceptID != "" {
-		err = s.DB.QueryRow(query+` AND id <> $1 LIMIT 1`, exceptID).Scan(&name)
-	} else {
-		err = s.DB.QueryRow(query + ` LIMIT 1`).Scan(&name)
-	}
-	if err == sql.ErrNoRows {
-		return "", nil
-	}
-	if err != nil {
+	name, err := s.roleHolder("keeper", exceptID)
+	if err != nil || name == "" {
 		return "", err
 	}
 	return fmt.Sprintf("%s is already wicketkeeper. Remove that role first.", name), nil
+}
+
+// roleHolder asks the database who holds a role ("captain" / "vice" / "keeper"); "" when nobody.
+func (s *Server) roleHolder(role, exceptID string) (string, error) {
+	var name sql.NullString
+	if err := s.DB.QueryRow(`SELECT fn_player_role_holder($1, $2)`, role, nullify(exceptID)).Scan(&name); err != nil {
+		return "", err
+	}
+	return name.String, nil
 }
 
 // POST /api/players (admin only, multipart form + optional "photo" file)
@@ -279,17 +255,20 @@ func (s *Server) CreatePlayer(c *gin.Context) {
 		joinedParam = v
 	}
 
-	row := s.DB.QueryRow(
-		`INSERT INTO players (name, role, batting_style, bowling_style, jersey_number, bio, fielding_notes, photo_url, is_captain, is_vice_captain, is_wicketkeeper, joined_date, intro_video_url)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12::date, CURRENT_DATE),$13)
-		 RETURNING `+playerColumns,
+	var id int
+	err := s.DB.QueryRow(
+		`CALL sp_player_create($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, NULL)`,
 		name, role, nullify(c.PostForm("batting_style")), nullify(c.PostForm("bowling_style")),
 		jerseyNumber, nullify(c.PostForm("bio")), nullify(c.PostForm("fielding_notes")), nullify(photoURL),
 		isCaptain, isVice, isKeeper, joinedParam, nullify(videoURL),
-	)
-	player, err := scanPlayerRow(row)
+	).Scan(&id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create player: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create player"})
+		return
+	}
+	player, err := scanPlayerRow(s.DB.QueryRow(`SELECT * FROM fn_player($1)`, id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read the new player"})
 		return
 	}
 	c.JSON(http.StatusCreated, player)
@@ -351,22 +330,24 @@ func (s *Server) UpdatePlayer(c *gin.Context) {
 		joinedParam = v
 	}
 
-	row := s.DB.QueryRow(
-		`UPDATE players SET name=$1, role=$2, batting_style=$3, bowling_style=$4, jersey_number=$5,
-		 bio=$6, fielding_notes=$7, photo_url=$8, is_captain=$9, is_vice_captain=$10, is_wicketkeeper=$11, joined_date=COALESCE($12::date, joined_date), intro_video_url=$14
-		 WHERE id=$13
-		 RETURNING `+playerColumns,
-		name, role, nullify(c.PostForm("batting_style")), nullify(c.PostForm("bowling_style")),
+	var affected int
+	err := s.DB.QueryRow(
+		`CALL sp_player_update($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, 0)`,
+		id, name, role, nullify(c.PostForm("batting_style")), nullify(c.PostForm("bowling_style")),
 		jerseyNumber, nullify(c.PostForm("bio")), nullify(c.PostForm("fielding_notes")), nullify(photoURL),
-		isCaptain, isVice, isKeeper, joinedParam, id, nullify(videoURL),
-	)
-	player, err := scanPlayerRow(row)
-	if err == sql.ErrNoRows {
+		isCaptain, isVice, isKeeper, joinedParam, nullify(videoURL),
+	).Scan(&affected)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update player"})
+		return
+	}
+	if affected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Player not found"})
 		return
 	}
+	player, err := scanPlayerRow(s.DB.QueryRow(`SELECT * FROM fn_player($1)`, id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update player"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read the player"})
 		return
 	}
 	c.JSON(http.StatusOK, player)
@@ -374,12 +355,11 @@ func (s *Server) UpdatePlayer(c *gin.Context) {
 
 // DELETE /api/players/:id (admin only)
 func (s *Server) DeletePlayer(c *gin.Context) {
-	res, err := s.DB.Exec(`DELETE FROM players WHERE id = $1`, c.Param("id"))
-	if err != nil {
+	var n int
+	if err := s.DB.QueryRow(`CALL sp_player_delete($1, 0)`, c.Param("id")).Scan(&n); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete player"})
 		return
 	}
-	n, _ := res.RowsAffected()
 	if n == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Player not found"})
 		return

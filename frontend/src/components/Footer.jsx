@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, CalendarDays, Trophy } from 'lucide-react';
+import { Users, CalendarDays, Trophy, Swords } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -16,6 +16,7 @@ export default function Footer() {
           <Link to="/players"><Users size={15} aria-hidden="true" /> Squad</Link>
           <Link to="/matches"><CalendarDays size={15} aria-hidden="true" /> Matches</Link>
           <Link to="/leaderboard"><Trophy size={15} aria-hidden="true" /> Leaderboard</Link>
+          <Link to="/compare"><Swords size={15} aria-hidden="true" /> Comparison</Link>
         </nav>
       </div>
       <div className="footer-copy">The Challengers Cricket Club &copy; {new Date().getFullYear()}</div>

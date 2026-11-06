@@ -10,7 +10,7 @@ import (
 
 // GET /api/team
 func (s *Server) GetTeam(c *gin.Context) {
-	row := s.DB.QueryRow(`SELECT id, name, tagline, founded_year, logo_url, about FROM team_info LIMIT 1`)
+	row := s.DB.QueryRow(`SELECT * FROM fn_team()`)
 
 	var id int
 	var name string
@@ -57,20 +57,8 @@ func (s *Server) UpdateTeam(c *gin.Context) {
 		}
 	}
 
-	var existingID int
-	err := s.DB.QueryRow(`SELECT id FROM team_info LIMIT 1`).Scan(&existingID)
-	if err == sql.ErrNoRows {
-		_, err = s.DB.Exec(
-			`INSERT INTO team_info (name, tagline, founded_year, logo_url, about) VALUES ($1,$2,$3,$4,$5)`,
-			name, nullify(tagline), foundedYear, nullify(logoURL), nullify(about),
-		)
-	} else if err == nil {
-		_, err = s.DB.Exec(
-			`UPDATE team_info SET name=$1, tagline=$2, founded_year=$3, logo_url=$4, about=$5 WHERE id=$6`,
-			name, nullify(tagline), foundedYear, nullify(logoURL), nullify(about), existingID,
-		)
-	}
-	if err != nil {
+	if _, err := s.DB.Exec(`CALL sp_team_upsert($1, $2, $3, $4, $5)`,
+		name, nullify(tagline), foundedYear, nullify(logoURL), nullify(about)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update team info"})
 		return
 	}

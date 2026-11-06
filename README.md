@@ -57,10 +57,8 @@ cp .env.example .env
 go mod tidy      # downloads gin, jwt, pq, pdf-parsing libs etc.
 go run ./cmd/migrate
 ```
-This creates all tables and a default admin login: **username `admin` / password `admin123`**
-— log in once and then change this (there's no "change password" UI yet; simplest is
-to update the `admins` table directly, or re-hash a new password with `bcrypt.GenerateFromPassword`
-in a throwaway `go run` script).
+This creates all tables and routines. Create the admin login with `go run ./cmd/setadmin <username> "<password>"` (`DATABASE_URL` must be set in the environment).
+After that, change it any time from Admin → Account.
 
 ### 2. Backend
 ```bash

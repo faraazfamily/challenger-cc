@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"golang.org/x/crypto/bcrypt"
 
 	"challenger-cc-backend/internal/db"
 )
@@ -31,6 +30,13 @@ func main() {
 	if _, err := db.Pool.Exec(string(schema)); err != nil {
 		log.Fatalf("migration failed: %v", err)
 	}
+	routines, err := os.ReadFile("migrations/routines.sql")
+	if err != nil {
+		log.Fatalf("failed to read migrations/routines.sql: %v", err)
+	}
+	if _, err := db.Pool.Exec(string(routines)); err != nil {
+		log.Fatalf("routines failed: %v", err)
+	}
 	log.Println("✅ Schema created successfully.")
 
 	var teamCount int
@@ -49,20 +55,7 @@ func main() {
 		log.Println("✅ Default team_info row inserted.")
 	}
 
-	var adminCount int
-	if err := db.Pool.QueryRow(`SELECT COUNT(*) FROM admins`).Scan(&adminCount); err != nil {
-		log.Fatalf("failed to check admins: %v", err)
-	}
-	if adminCount == 0 {
-		hash, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
-		if err != nil {
-			log.Fatalf("failed to hash default password: %v", err)
-		}
-		if _, err := db.Pool.Exec(`INSERT INTO admins (username, password_hash) VALUES ($1,$2)`, "admin", string(hash)); err != nil {
-			log.Fatalf("failed to seed admin: %v", err)
-		}
-		log.Println("✅ Default admin created — username: admin / password: admin123 (CHANGE THIS after first login).")
-	}
+	// No default admin password any more: create the admin with cmd/setadmin.
 
 	seedPlayer("Faraaz", "Batsman", "Right-hand bat", "Part-time medium pacer", "Poor fielder", "", 25, false, false)
 	seedPlayer("Asad", "All-rounder", "Right-hand bat", "Spinner", "One of the best fielders in the team", "Captain of the team", 0, true, false)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, CalendarDays, Trophy, UserRound, LayoutDashboard, ShieldCheck, LogIn, Menu, X } from 'lucide-react';
+import { Home, Users, CalendarDays, Trophy, Swords, ShieldCheck, LogIn, Menu, X } from 'lucide-react';
 import { isLoggedIn } from '../api';
 
 export default function Navbar() {
@@ -19,13 +19,12 @@ export default function Navbar() {
 
   // While a match is being scored the bar scrolls away, leaving the screen to the run keys.
   const scoring = pathname === '/admin' && /[?&](live|new|view)=/.test(search);
-  const member = localStorage.getItem('cc_member');
   const links = [
     ['/', 'Home', Home],
     ['/players', 'Players', Users],
     ['/matches', 'Matches', CalendarDays],
     ['/leaderboard', 'Leaderboard', Trophy],
-    member ? ['/me', 'My Dashboard', LayoutDashboard] : ['/member-login', 'Member Login', UserRound],
+    ['/compare', 'Comparison', Swords],
     isLoggedIn() ? ['/admin', 'Admin', ShieldCheck] : ['/login', 'Admin Login', LogIn],
   ];
 

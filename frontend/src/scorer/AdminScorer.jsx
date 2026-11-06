@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useDialog } from '../components/Dialog';
 import { Plus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
@@ -153,6 +154,7 @@ function Players({ players, team, setTeam }) {
 const HOME_TABS = [['history', 'History'], ['teams', 'Teams'], ['players', 'Players']];
 
 export default function AdminScorer() {
+  const { confirm, prompt: ask, toast } = useDialog();
   // Which screen is open lives in the URL next to the admin tab, so a refresh (or the phone's
   // back button) lands on the same place: sc = home tab, new = setup, live = match being scored,
   // view = saved match.
@@ -241,8 +243,8 @@ export default function AdminScorer() {
   }
 
   async function discard(h) {
-    if (!confirm(`Delete ${h.title}? It was never saved, so nothing has been added to player stats.`)) return;
-    await api.scorerDelete(h.id).catch((e) => setError(e.message));
+    if (!await confirm({ title: `Delete ${h.title}?`, message: 'It was never saved, so nothing has been added to player stats.', confirmLabel: 'Delete', danger: true })) return;
+    await api.scorerDelete(h.id).then(() => toast('Match deleted', 'success')).catch((e) => setError(e.message));
     localStorage.removeItem(`cc_scorer_${h.id}`);
     load();
   }

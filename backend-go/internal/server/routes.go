@@ -10,7 +10,8 @@ import (
 // RegisterRoutes wires every endpoint to its handler. Route paths match the
 // React frontend's api.js exactly, so the frontend needs zero changes.
 func (s *Server) RegisterRoutes(r *gin.Engine) {
-	auth := middleware.RequireAuth(s.JWTSecret)
+	auth := middleware.RequireAuth(s.JWTSecret, s.SessionValid)
+	r.Use(ValidIDs())
 
 	// Health check for the host / uptime monitor. Deliberately does NOT touch the
 	// database, so pinging it never wakes (or bills) the serverless Postgres.
@@ -30,7 +31,7 @@ func (s *Server) RegisterRoutes(r *gin.Engine) {
 	r.GET("/uploads/:name", s.ServeUpload)
 
 	r.POST("/api/auth/login", s.Login)
-	r.POST("/api/members/login", s.MemberLogin)
+	r.PUT("/api/auth/credentials", auth, s.ChangeCredentials)
 
 	r.GET("/api/team", s.GetTeam)
 	r.PUT("/api/team", auth, s.UpdateTeam)

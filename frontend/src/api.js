@@ -68,12 +68,13 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }).then(handle),
 
-  memberLogin: (name) =>
-    fetch(`${BASE}/api/members/login`, {
-      method: 'POST',
+  changeCredentials: (payload) =>
+    fetch(`${BASE}/api/auth/credentials`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(payload),
     }).then(handle),
+
 
   // Team
   getTeam: () => getCached('/api/team'),

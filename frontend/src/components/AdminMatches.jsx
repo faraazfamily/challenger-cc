@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useDialog } from './Dialog';
 import { Trash2 } from 'lucide-react';
 import { api } from '../api';
 import { SkeletonRows } from './Feedback';
 
 export default function AdminMatches() {
+  const { confirm, prompt: ask, toast } = useDialog();
   const [matches, setMatches] = useState(null); // null = still loading
 
   useEffect(() => {
@@ -12,17 +14,27 @@ export default function AdminMatches() {
 
   async function toggleRecords(m) {
     const next = !m.in_records;
-    const msg = next
-      ? 'Count this match in player stats, the leaderboard and the team record again?'
-      : 'Remove this match from player stats, the leaderboard and the team record? The match itself is kept and you can switch it back on any time.';
-    if (!confirm(msg)) return;
-    await api.setMatchInRecords(m.id, next);
+    const ok = await confirm(next
+      ? { title: 'Count this match again?', message: 'It goes back into player stats, the leaderboard and the team record.', confirmLabel: 'Count it' }
+      : { title: 'Stop counting this match?', message: 'It is taken out of player stats, the leaderboard and the team record. The match itself is kept and you can switch it back on any time.', confirmLabel: 'Stop counting', danger: true });
+    if (!ok) return;
+    try {
+      await api.setMatchInRecords(m.id, next);
+      toast(next ? 'Match counted again' : 'Match no longer counted', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
     api.getMatches().then(setMatches).catch(() => setMatches((m) => m || []));
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this match? This also removes its scorecard stats.')) return;
-    await api.deleteMatch(id);
+  async function handleDelete(m) {
+    if (!await confirm({ title: `Delete the match vs ${m.opponent}?`, message: 'This also removes its scorecard stats. This cannot be undone.', confirmLabel: 'Delete', danger: true })) return;
+    try {
+      await api.deleteMatch(m.id);
+      toast('Match deleted', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
     api.getMatches().then(setMatches).catch(() => setMatches((m) => m || []));
   }
 
@@ -50,7 +62,7 @@ export default function AdminMatches() {
                       <span className="switch-label">{m.in_records ? 'Counted' : 'Not counted'}</span>
                     </button>
                   </td>
-                  <td className="am-del"><button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(m.id)}><Trash2 size={14} aria-hidden="true" /> Delete</button></td>
+                  <td className="am-del"><button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDelete(m)}><Trash2 size={14} aria-hidden="true" /> Delete</button></td>
                 </tr>
               ))}
             </tbody>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, Swords, RotateCw } from 'lucide-react';
-import { api } from '../api';
+import { useSearchParams } from 'react-router-dom';
+import { ArrowLeftRight, RotateCw, Swords } from 'lucide-react';
+import { api, cached } from '../api';
+import PlayerPicker from '../components/PlayerPicker';
 import { PlayerAvatar } from '../components/PlayerCard';
-import { SkeletonStage, SkeletonRows, EmptyState } from '../components/Feedback';
+import { SkeletonRows, EmptyState } from '../components/Feedback';
 import { CountUp } from '../motion';
 
 const bat = (p) => p.career?.batting || {};
@@ -99,105 +100,58 @@ function Duel({ me, other }) {
   );
 }
 
-export default function MemberDashboard() {
-  const navigate = useNavigate();
-  const [player, setPlayer] = useState(null);
-  const [squad, setSquad] = useState([]);
-  const [compareId, setCompareId] = useState('');
-  const [other, setOther] = useState(null);
-  const [compareError, setCompareError] = useState('');
+export default function Compare() {
+  // The two players live in the URL (/compare?a=3&b=7), so a comparison survives a refresh and can be shared.
+  const [params, setParams] = useSearchParams();
+  const aId = params.get('a') || '';
+  const bId = params.get('b') || '';
+  const [squad, setSquad] = useState(() => cached('/api/players') || []);
+  const [pair, setPair] = useState(null); // { a, b } full player records with career stats
+  const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
 
-  useEffect(() => {
-    const raw = localStorage.getItem('cc_member');
-    if (!raw) {
-      navigate('/member-login');
-      return;
-    }
-    let member;
-    try {
-      member = JSON.parse(raw);
-    } catch {
-      navigate('/member-login');
-      return;
-    }
-    api.getPlayer(member.id).then(setPlayer).catch(async () => {
-      if (!member.name) {
-        localStorage.removeItem('cc_member');
-        navigate('/member-login');
-        return;
-      }
-      try {
-        const found = await api.memberLogin(member.name);
-        localStorage.setItem('cc_member', JSON.stringify({ id: found.id, name: found.name }));
-        setPlayer(found);
-      } catch {
-        localStorage.removeItem('cc_member');
-        navigate('/member-login');
-      }
-    });
-    api.getPlayers().then(setSquad).catch(() => {});
-  }, [navigate]);
+  useEffect(() => { api.getPlayers().then(setSquad).catch(() => {}); }, []);
 
   useEffect(() => {
-    if (!compareId || !player) {
-      setOther(null);
-      return;
+    setError('');
+    if (!aId || !bId) {
+      setPair(null);
+      return undefined;
     }
     let cancelled = false;
-    setCompareError('');
-    Promise.all([api.getPlayer(player.id), api.getPlayer(compareId)])
-      .then(([me, teammate]) => {
-        if (cancelled) return;
-        setPlayer(me);
-        setOther(teammate);
-      })
-      // keep the page; just say this comparison did not load and offer a retry
-      .catch((e) => { if (!cancelled) setCompareError(e.message || 'Could not load this player'); });
+    Promise.all([api.getPlayer(aId), api.getPlayer(bId)])
+      .then(([a, b]) => { if (!cancelled) setPair({ a, b }); })
+      .catch((e) => { if (!cancelled) { setPair(null); setError(e.message || 'Could not load these players'); } });
     return () => { cancelled = true; };
-  }, [compareId, retry]);
+  }, [aId, bId, retry]);
 
-  function logout() {
-    localStorage.removeItem('cc_member');
-    navigate('/member-login');
-  }
-
-  if (!player) return <SkeletonStage />;
-
-  const others = squad.filter((p) => p.id !== player.id);
+  const setPlayer = (key, id) => setParams((prev) => {
+    const next = new URLSearchParams(prev);
+    next.set(key, id);
+    return next;
+  }, { replace: true });
+  const swap = () => setParams({ ...(bId && { a: bId }), ...(aId && { b: aId }) }, { replace: true });
+  const ready = pair && String(pair.a.id) === aId && String(pair.b.id) === bId;
 
   return (
     <div className="container section">
-      <div className="member-head">
-        <PlayerAvatar player={player} className="member-avatar" size={96} />
-        <div>
-          <span className="member-hi">Welcome back</span>
-          <h2>{player.name}</h2>
-        </div>
-        <button className="btn btn-secondary btn-sm btn-icon" type="button" onClick={logout}><LogOut size={15} aria-hidden="true" /> Log out</button>
+      <h2 data-reveal>Comparison</h2>
+      <p className="compare-intro">Pick any two players and see who is ahead, stat by stat.</p>
+
+      <div className="compare-pickers">
+        <PlayerPicker label="Player 1" players={squad} value={aId} disabledId={bId} onChange={(id) => setPlayer('a', id)} />
+        <button type="button" className="compare-swap" onClick={swap} disabled={!aId && !bId} aria-label="Swap players"><ArrowLeftRight size={18} /></button>
+        <PlayerPicker label="Player 2" players={squad} value={bId} disabledId={aId} onChange={(id) => setPlayer('b', id)} />
       </div>
 
-      <h3 className="pick-title"><Swords size={20} aria-hidden="true" /> Compare with a teammate</h3>
-      {/* tap a face instead of a native dropdown: scrolls sideways on a phone */}
-      <div className="mate-strip" role="listbox" aria-label="Pick a teammate">
-        {others.map((p, i) => (
-          <button key={p.id} type="button" role="option" aria-selected={String(p.id) === String(compareId)}
-            className={`mate ${String(p.id) === String(compareId) ? 'on' : ''}`} style={{ '--i': i }}
-            onClick={() => setCompareId(String(p.id) === String(compareId) ? '' : String(p.id))}>
-            <PlayerAvatar player={p} className="mate-avatar" size={96} />
-            <span>{p.name}</span>
-          </button>
-        ))}
-      </div>
-
-      {compareError && (
+      {error && (
         <div className="inline-error" role="alert">
-          <span>{compareError}. Check your connection and try again.</span>
+          <span>{error}. Check your connection and try again.</span>
           <button type="button" className="btn btn-secondary btn-sm btn-icon" onClick={() => setRetry((n) => n + 1)}><RotateCw size={14} aria-hidden="true" /> Try again</button>
         </div>
       )}
-      {other && String(other.id) === String(compareId) ? <Duel me={player} other={other} /> : compareId && !compareError ? <SkeletonRows rows={4} /> : (
-        <EmptyState icon={Swords} title="Pick a teammate">Tap a face above to see who is ahead, stat by stat.</EmptyState>
+      {ready ? <Duel me={pair.a} other={pair.b} /> : aId && bId && !error ? <SkeletonRows rows={4} /> : !error && (
+        <EmptyState icon={Swords} title="Pick two players">Choose them from the two dropdowns above.</EmptyState>
       )}
     </div>
   );

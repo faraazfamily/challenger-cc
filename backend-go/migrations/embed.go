@@ -10,9 +10,16 @@ import (
 //go:embed schema.sql
 var schema string
 
+//go:embed routines.sql
+var routines string
+
 // Apply runs schema.sql. It is idempotent: it only creates tables / columns /
 // indexes that are missing and never deletes or rewrites existing rows.
 func Apply(d *sql.DB) error {
-	_, err := d.Exec(schema)
+	if _, err := d.Exec(schema); err != nil {
+		return err
+	}
+	// Every read is a fn_* function and every write an sp_* procedure (routines.sql).
+	_, err := d.Exec(routines)
 	return err
 }

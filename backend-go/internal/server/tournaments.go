@@ -16,7 +16,7 @@ type tournamentRequest struct {
 
 // GET /api/tournaments
 func (s *Server) GetTournaments(c *gin.Context) {
-	rows, err := s.DB.Query(`SELECT id, name, year, start_date, end_date FROM tournaments ORDER BY start_date DESC NULLS LAST`)
+	rows, err := s.DB.Query(`SELECT * FROM fn_tournaments()`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tournaments"})
 		return
@@ -49,12 +49,8 @@ func (s *Server) CreateTournament(c *gin.Context) {
 	}
 
 	var id int
-	err := s.DB.QueryRow(
-		`INSERT INTO tournaments (name, year, start_date, end_date)
-		 VALUES ($1,$2,NULLIF($3,'')::date,NULLIF($4,'')::date) RETURNING id`,
-		req.Name, req.Year, req.StartDate, req.EndDate,
-	).Scan(&id)
-	if err != nil {
+	if err := s.DB.QueryRow(`CALL sp_tournament_create($1, $2, $3, $4, NULL)`,
+		req.Name, req.Year, req.StartDate, req.EndDate).Scan(&id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create tournament"})
 		return
 	}
@@ -71,16 +67,13 @@ func (s *Server) UpdateTournament(c *gin.Context) {
 		return
 	}
 
-	res, err := s.DB.Exec(
-		`UPDATE tournaments SET name=$1, year=$2, start_date=NULLIF($3,'')::date, end_date=NULLIF($4,'')::date WHERE id=$5`,
-		req.Name, req.Year, req.StartDate, req.EndDate, c.Param("id"),
-	)
-	if err != nil {
+	var affected int
+	if err := s.DB.QueryRow(`CALL sp_tournament_update($1, $2, $3, $4, $5, 0)`,
+		c.Param("id"), req.Name, req.Year, req.StartDate, req.EndDate).Scan(&affected); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tournament"})
 		return
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if affected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tournament not found"})
 		return
 	}
@@ -92,7 +85,7 @@ func (s *Server) UpdateTournament(c *gin.Context) {
 
 // DELETE /api/tournaments/:id (admin only)
 func (s *Server) DeleteTournament(c *gin.Context) {
-	if _, err := s.DB.Exec(`DELETE FROM tournaments WHERE id = $1`, c.Param("id")); err != nil {
+	if _, err := s.DB.Exec(`CALL sp_tournament_delete($1)`, c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete tournament"})
 		return
 	}

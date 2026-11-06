@@ -9,6 +9,7 @@ import (
 	_ "image/gif" // registered so image.Decode can read the formats phones upload
 	"image/jpeg"
 	_ "image/png"
+	"regexp"
 	"strconv"
 	"sync"
 
@@ -23,17 +24,28 @@ import (
 //
 // HEIC and other formats Go cannot decode are stored and served as they are.
 const (
-	maxUploadSide  = 1600
-	resizedQuality = 82
+	maxUploadSide   = 1600
+	maxDecodePixels = 60_000_000
+	resizedQuality  = 82
 )
 
 var allowedWidths = map[int]bool{96: true, 200: true, 400: true, 800: true}
 
 var resizedCache sync.Map // "w400-<name>" -> []byte
 
+var variantName = regexp.MustCompile(`^w[0-9]+-`)
+
+// isVariantName reports whether a stored file is itself a resized copy.
+func isVariantName(name string) bool { return variantName.MatchString(name) }
+
 // shrinkImage returns data scaled so its long edge is at most maxSide, as JPEG.
 // Anything it cannot decode comes back unchanged with ok=false.
 func shrinkImage(data []byte, maxSide int) (out []byte, contentType string, ok bool) {
+	// Read the size first: a tiny file can claim gigantic dimensions and exhaust memory.
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil || cfg.Width*cfg.Height > maxDecodePixels {
+		return data, "", false
+	}
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return data, "", false
@@ -69,7 +81,7 @@ func (s *Server) resizedVariant(name string, width int, original []byte) ([]byte
 		return v.([]byte), "image/jpeg", nil
 	}
 	var data []byte
-	err := s.DB.QueryRow(`SELECT data FROM files WHERE name = $1`, key).Scan(&data)
+	err := s.DB.QueryRow(`SELECT data FROM fn_file($1)`, key).Scan(&data)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, "", err
 	}
@@ -81,7 +93,7 @@ func (s *Server) resizedVariant(name string, width int, original []byte) ([]byte
 			return nil, "", errNoVariant
 		}
 		// best effort: a failed save only means it is made again next time
-		_, _ = s.DB.Exec(`INSERT INTO files (name, content_type, data) VALUES ($1,$2,$3) ON CONFLICT (name) DO NOTHING`, key, "image/jpeg", data)
+		_, _ = s.DB.Exec(`CALL sp_file_insert($1, $2, $3, true)`, key, "image/jpeg", data)
 	}
 	resizedCache.Store(key, data)
 	return data, "image/jpeg", nil

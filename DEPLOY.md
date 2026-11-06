@@ -25,7 +25,7 @@ go run ./cmd/copydata
 Ye Neon ke tables khaali karke laptop ka poora data (players, matches, stats, photos) copy karta hai.
 Pehle dono "host" line dekh lena: FROM = localhost, TO = neon.tech.
 
-## Step 4 — Admin password badlo (public site pe `admin123` mat rakhna)
+## Step 4 — Admin login banao (baad mein Admin → Account se badal sakte ho)
 ```powershell
 $env:DATABASE_URL="NEON_CONNECTION_STRING"
 go run ./cmd/setadmin admin "TumharaNayaStrongPassword"

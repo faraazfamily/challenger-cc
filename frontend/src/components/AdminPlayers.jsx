@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useDialog } from './Dialog';
 import { Plus, Pencil, Trash2, Clapperboard, Search, Star, Shield, Hand } from 'lucide-react';
 import { api, assetUrl } from '../api';
 import { prepareIntroVideo } from './introVideo';
@@ -54,6 +55,7 @@ function KeeperSelect({ form, setForm, players, editingId }) {
 }
 
 export default function AdminPlayers() {
+  const { confirm, prompt: ask, toast } = useDialog();
   const [players, setPlayers] = useState(null); // null = still loading (no false "No players found")
   const [form, setForm] = useState(BLANK);
   const [photo, setPhoto] = useState(null);
@@ -165,6 +167,7 @@ export default function AdminPlayers() {
     try {
       if (editingId) await api.updatePlayer(editingId, fd);
       else await api.createPlayer(fd);
+      toast(editingId ? 'Player updated' : 'Player added', 'success');
       closeModal();
       load();
     } catch (err) {
@@ -182,12 +185,13 @@ export default function AdminPlayers() {
   });
 
   async function handleDelete(p) {
-    if (!confirm(`Delete ${p.name}? This also removes their match stats.`)) return;
+    if (!await confirm({ title: `Delete ${p.name}?`, message: 'This also removes their match stats. This cannot be undone.', confirmLabel: 'Delete', danger: true })) return;
     try {
       await api.deletePlayer(p.id);
+      toast(`${p.name} deleted`, 'success');
       load();
     } catch (err) {
-      alert(`Could not delete ${p.name}: ${err.message}`);
+      toast(`Could not delete ${p.name}: ${err.message}`, 'error');
     }
   }
 

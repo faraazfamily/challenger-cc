@@ -50,7 +50,15 @@ func main() {
 		UploadDir: uploadDir,
 	}
 
+	for _, w := range server.InsecureConfigWarnings() {
+		log.Printf("SECURITY WARNING: %s", w)
+	}
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.Default()
+	r.MaxMultipartMemory = 16 << 20
+	r.Use(server.SecurityHeaders())
 	r.Use(server.CORSMiddleware(os.Getenv("CLIENT_URL")))
 
 	srv.RegisterRoutes(r)

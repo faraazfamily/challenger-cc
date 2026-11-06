@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -8,14 +8,15 @@ import Matches from './pages/Matches';
 import MatchDetail from './pages/MatchDetail';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
-import MemberLogin from './pages/MemberLogin';
-import MemberDashboard from './pages/MemberDashboard';
+import Compare from './pages/Compare';
 import Admin from './pages/Admin';
 import NotFound from './pages/NotFound';
+import { DialogProvider } from './components/Dialog';
+import InstallPrompt from './components/InstallPrompt';
 
 export default function App() {
   return (
-    <>
+    <DialogProvider>
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -25,12 +26,15 @@ export default function App() {
         <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/member-login" element={<MemberLogin />} />
-        <Route path="/me" element={<MemberDashboard />} />
+        <Route path="/compare" element={<Compare />} />
+        {/* old links */}
+        <Route path="/member-login" element={<Navigate to="/compare" replace />} />
+        <Route path="/me" element={<Navigate to="/compare" replace />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
-    </>
+      <InstallPrompt />
+    </DialogProvider>
   );
 }

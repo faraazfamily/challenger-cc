@@ -30,11 +30,11 @@ export default function Login() {
         {expired && <div className="review-note">Your login expired. Please log in again.</div>}
         <div className="form-group">
           <label>Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" required />
         </div>
         <div className="form-group">
           <label>Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         {error && <div className="error-text">{error}</div>}
         <button className="btn btn-primary" type="submit" style={{ width: '100%' }}>Log In</button>

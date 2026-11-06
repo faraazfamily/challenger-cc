@@ -9,10 +9,7 @@ import (
 
 // GET /api/matches
 func (s *Server) GetMatches(c *gin.Context) {
-	rows, err := s.DB.Query(`
-		SELECT m.id, m.tournament_id, m.opponent, m.match_date, m.venue, m.our_score, m.opponent_score, m.result, t.name, m.in_records
-		FROM matches m LEFT JOIN tournaments t ON m.tournament_id = t.id
-		ORDER BY m.match_date DESC`)
+	rows, err := s.DB.Query(`SELECT * FROM fn_matches()`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch matches"})
 		return
@@ -44,17 +41,15 @@ func (s *Server) GetMatches(c *gin.Context) {
 func (s *Server) GetMatch(c *gin.Context) {
 	id := c.Param("id")
 
-	row := s.DB.QueryRow(`
-		SELECT m.id, m.tournament_id, m.opponent, m.match_date, m.venue, m.our_score, m.opponent_score, m.result, t.name
-		FROM matches m LEFT JOIN tournaments t ON m.tournament_id = t.id WHERE m.id = $1`, id)
-
 	var mid int
 	var tournamentID sql.NullInt32
 	var opponent, result string
 	var matchDate sql.NullTime
-	var venue, ourScore, oppScore, tournamentName sql.NullString
+	var venue, ourScore, oppScore, tournamentName, noteVal sql.NullString
+	var inRecords bool
 
-	err := row.Scan(&mid, &tournamentID, &opponent, &matchDate, &venue, &ourScore, &oppScore, &result, &tournamentName)
+	err := s.DB.QueryRow(`SELECT * FROM fn_match($1)`, id).
+		Scan(&mid, &tournamentID, &opponent, &matchDate, &venue, &ourScore, &oppScore, &result, &tournamentName, &noteVal, &inRecords)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Match not found"})
 		return
@@ -64,13 +59,7 @@ func (s *Server) GetMatch(c *gin.Context) {
 		return
 	}
 
-	var noteVal sql.NullString
-	inRecords := true
-	_ = s.DB.QueryRow(`SELECT result_note, in_records FROM matches WHERE id = $1`, id).Scan(&noteVal, &inRecords)
-
-	battingRows, err := s.DB.Query(`
-		SELECT bs.id, bs.player_id, p.name, bs.runs, bs.balls_faced, bs.fours, bs.sixes, bs.is_out, bs.dismissal_type, bs.innings_no
-		FROM batting_stats bs JOIN players p ON bs.player_id = p.id WHERE bs.match_id = $1 ORDER BY bs.innings_no, bs.runs DESC`, id)
+	battingRows, err := s.DB.Query(`SELECT * FROM fn_match_batting($1)`, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch batting stats"})
 		return
@@ -92,9 +81,7 @@ func (s *Server) GetMatch(c *gin.Context) {
 		})
 	}
 
-	bowlingRows, err := s.DB.Query(`
-		SELECT bw.id, bw.player_id, p.name, bw.overs, bw.maidens, bw.runs_conceded, bw.wickets, bw.innings_no
-		FROM bowling_stats bw JOIN players p ON bw.player_id = p.id WHERE bw.match_id = $1 ORDER BY bw.innings_no, bw.wickets DESC`, id)
+	bowlingRows, err := s.DB.Query(`SELECT * FROM fn_match_bowling($1)`, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch bowling stats"})
 		return
@@ -147,8 +134,7 @@ func (s *Server) CreateMatch(c *gin.Context) {
 
 	var id int
 	err := s.DB.QueryRow(
-		`INSERT INTO matches (tournament_id, opponent, match_date, venue, our_score, opponent_score, result)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+		`CALL sp_match_create($1, $2, $3, $4, $5, $6, $7, NULL, TRUE, NULL)`,
 		req.TournamentID, req.Opponent, req.MatchDate, nullify(req.Venue), nullify(req.OurScore), nullify(req.OpponentScore), req.Result,
 	).Scan(&id)
 	if err != nil {
@@ -166,16 +152,16 @@ func (s *Server) UpdateMatch(c *gin.Context) {
 		return
 	}
 
-	res, err := s.DB.Exec(
-		`UPDATE matches SET tournament_id=$1, opponent=$2, match_date=$3, venue=$4, our_score=$5, opponent_score=$6, result=$7 WHERE id=$8`,
-		req.TournamentID, req.Opponent, req.MatchDate, nullify(req.Venue), nullify(req.OurScore), nullify(req.OpponentScore), req.Result, c.Param("id"),
-	)
+	var affected int
+	err := s.DB.QueryRow(
+		`CALL sp_match_update($1, $2, $3, $4, $5, $6, $7, $8, 0)`,
+		c.Param("id"), req.TournamentID, req.Opponent, req.MatchDate, nullify(req.Venue), nullify(req.OurScore), nullify(req.OpponentScore), req.Result,
+	).Scan(&affected)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update match"})
 		return
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if affected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Match not found"})
 		return
 	}
@@ -184,7 +170,7 @@ func (s *Server) UpdateMatch(c *gin.Context) {
 
 // DELETE /api/matches/:id (admin only)
 func (s *Server) DeleteMatch(c *gin.Context) {
-	if _, err := s.DB.Exec(`DELETE FROM matches WHERE id = $1`, c.Param("id")); err != nil {
+	if _, err := s.DB.Exec(`CALL sp_match_delete($1)`, c.Param("id")); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete match"})
 		return
 	}
@@ -236,11 +222,7 @@ func (s *Server) SaveMatchStats(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 	}
 
-	if _, err := tx.Exec(`DELETE FROM batting_stats WHERE match_id = $1`, matchID); err != nil {
-		fail("Failed to save match stats")
-		return
-	}
-	if _, err := tx.Exec(`DELETE FROM bowling_stats WHERE match_id = $1`, matchID); err != nil {
+	if _, err := tx.Exec(`CALL sp_match_stats_clear($1)`, matchID); err != nil {
 		fail("Failed to save match stats")
 		return
 	}
@@ -250,28 +232,22 @@ func (s *Server) SaveMatchStats(c *gin.Context) {
 		if b.IsOut != nil {
 			isOut = *b.IsOut
 		}
-		if _, err := tx.Exec(
-			`INSERT INTO batting_stats (match_id, player_id, runs, balls_faced, fours, sixes, is_out, dismissal_type)
-			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-			matchID, b.PlayerID, b.Runs, b.BallsFaced, b.Fours, b.Sixes, isOut, nullify(b.DismissalType),
-		); err != nil {
+		if _, err := tx.Exec(`CALL sp_batting_insert($1, $2, 1, $3, $4, $5, $6, $7, $8)`,
+			matchID, b.PlayerID, b.Runs, b.BallsFaced, b.Fours, b.Sixes, isOut, nullify(b.DismissalType)); err != nil {
 			fail("Failed to save match stats")
 			return
 		}
 	}
 
 	for _, bw := range req.Bowling {
-		if _, err := tx.Exec(
-			`INSERT INTO bowling_stats (match_id, player_id, overs, maidens, runs_conceded, wickets)
-			 VALUES ($1,$2,$3,$4,$5,$6)`,
-			matchID, bw.PlayerID, bw.Overs, bw.Maidens, bw.RunsConceded, bw.Wickets,
-		); err != nil {
+		if _, err := tx.Exec(`CALL sp_bowling_insert($1, $2, 1, $3, $4, $5, $6)`,
+			matchID, bw.PlayerID, bw.Overs, bw.Maidens, bw.RunsConceded, bw.Wickets); err != nil {
 			fail("Failed to save match stats")
 			return
 		}
 	}
 
-	if _, err := tx.Exec(`UPDATE scorecards SET is_reviewed = true WHERE match_id = $1`, matchID); err != nil {
+	if _, err := tx.Exec(`CALL sp_scorecard_mark_reviewed($1)`, matchID); err != nil {
 		fail("Failed to save match stats")
 		return
 	}
@@ -296,12 +272,12 @@ func (s *Server) SetMatchInRecords(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "in_records (true/false) is required"})
 		return
 	}
-	res, err := s.DB.Exec(`UPDATE matches SET in_records = $1 WHERE id = $2`, req.InRecords, c.Param("id"))
-	if err != nil {
+	var affected int
+	if err := s.DB.QueryRow(`CALL sp_match_set_in_records($1, $2, 0)`, c.Param("id"), req.InRecords).Scan(&affected); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the match"})
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
+	if affected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Match not found"})
 		return
 	}
