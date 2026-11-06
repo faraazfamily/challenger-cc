@@ -286,15 +286,6 @@ html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-sprin
 @keyframes hot-pulse { 50% { box-shadow: 0 0 0 8px rgba(59,182,220,0.08); } }
 .review-note { animation: reveal-up 0.45s var(--ease-out) backwards; }
 
-/* ---------- mobile menu ---------- */
-@media (max-width: 960px) {
-  .navbar nav.open a { animation: reveal-left 0.35s var(--ease-out) backwards; }
-  .navbar nav.open a:nth-child(2) { animation-delay: 0.04s; }
-  .navbar nav.open a:nth-child(3) { animation-delay: 0.08s; }
-  .navbar nav.open a:nth-child(4) { animation-delay: 0.12s; }
-  .navbar nav.open a:nth-child(5) { animation-delay: 0.16s; }
-  .navbar nav.open a:nth-child(6) { animation-delay: 0.2s; }
-}
 @media (max-width: 720px) {
   .admin-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   /* admin match list: one card per match on phones */
@@ -323,7 +314,6 @@ html.motion .player-card.in .pc-jersey { animation: pop-in 0.5s var(--ease-sprin
   .stage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stage-styles { text-align: left; }
 }
-@keyframes menu-down { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 /* ---------- less motion when the phone asks for it ---------- */
 @media (prefers-reduced-motion: reduce) {

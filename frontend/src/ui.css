@@ -6,7 +6,7 @@
 .btn-icon svg { flex: none; }
 .btn-ghost { background: rgba(255,255,255,0.06); color: #eaf3fb; border-color: rgba(255,255,255,0.22); }
 .btn-ghost:hover { background: rgba(255,255,255,0.12); border-color: var(--gold-light); }
-.btn:focus-visible, .stat-tab:focus-visible, .navbar a:focus-visible, .admin-tile:focus-visible {
+.btn:focus-visible, .stat-tab:focus-visible, .navbar a:focus-visible, .nav-strip a:focus-visible, .nav-app:focus-visible, .admin-tile:focus-visible {
   outline: 2px solid var(--gold-light); outline-offset: 2px;
 }
 .stat-tab { display: inline-flex; align-items: center; gap: 7px; font-family: inherit; }
@@ -430,13 +430,7 @@ html:has(.sc-wrap.playing) .install-card { display: none; }
 /* table rows become stacked cards on phones: a row hover would paint each cell as a separate patch */
 @media (max-width: 720px) { tr:hover td { background: transparent; } }
 
-/* ---------- install app: menu + footer buttons, steps sheet ---------- */
-.nav-install { display: none; }
-.footer-links button {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.86rem;
-  color: var(--gold-light); background: rgba(59,182,220,0.1); border: 1px solid rgba(59,182,220,0.4); transition: background 0.2s ease;
-}
-.footer-links button:hover { background: rgba(59,182,220,0.2); }
+/* ---------- install / open app: steps sheet ---------- */
 .install-guide-icon { flex: none; border-radius: 10px; }
 .install-steps { margin: 6px 0 14px; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 12px; color: #374151; line-height: 1.45; }
 .install-steps li { counter-increment: step; position: relative; padding-left: 38px; min-height: 26px; }
@@ -446,9 +440,21 @@ html:has(.sc-wrap.playing) .install-card { display: none; }
 }
 .install-copy { width: 100%; justify-content: center; padding: 12px; margin-bottom: 10px; }
 .install-url { margin: 0; text-align: center; color: #6b7280; font-size: 0.82rem; user-select: all; }
-@media (max-width: 960px) {
-  .navbar nav .nav-install {
-    display: flex; align-items: center; gap: 7px; width: 100%; padding: 13px 14px; border-radius: 12px; border: none; cursor: pointer; text-align: left;
-    font: 600 1rem var(--font-body); color: var(--gold-light); background: rgba(59,182,220,0.1);
-  }
+.install-note { margin: 0 0 12px; color: #4b5563; font-size: 0.88rem; line-height: 1.45; }
+
+/* ---------- back to top: round button whose ring shows how far down the page you are ---------- */
+.to-top {
+  position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 39; width: 52px; height: 52px; padding: 0; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%; cursor: pointer; background: #fff; color: var(--gold-ink); box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+  opacity: 0; visibility: hidden; transform: translateY(10px); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
 }
+.to-top.show { opacity: 1; visibility: visible; transform: none; transition: opacity 0.2s ease, transform 0.2s ease; }
+.to-top:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.to-top-dial { position: absolute; inset: 0; transform: rotate(-90deg); }
+.to-top circle { fill: none; stroke-width: 3; }
+.to-top-track { stroke: #e2e8f0; }
+.to-top-ring { stroke: var(--gold); stroke-linecap: round; }
+/* it sits above the app card, and never over the fixed scoring keys */
+html:has(.install-card) .to-top { bottom: calc(112px + env(safe-area-inset-bottom)); }
+html:has(.sc-wrap.playing) .to-top { display: none; }
+@media (min-width: 721px) { .to-top { right: 20px; } html:has(.install-card) .to-top { bottom: 100px; } }

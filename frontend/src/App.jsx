@@ -13,6 +13,7 @@ import Admin from './pages/Admin';
 import NotFound from './pages/NotFound';
 import { DialogProvider } from './components/Dialog';
 import InstallPrompt from './components/InstallPrompt';
+import ToTop from './components/ToTop';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
+      <ToTop />
       <InstallPrompt />
     </DialogProvider>
   );
