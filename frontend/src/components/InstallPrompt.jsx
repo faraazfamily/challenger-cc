@@ -1,59 +1,86 @@
 import { useEffect, useState } from 'react';
-import { Download, Share, X } from 'lucide-react';
+import { Check, Copy, Download, X } from 'lucide-react';
+import { closeInstallGuide, guideFor, startInstall, useInstall } from '../install';
 
 const HIDE_KEY = 'cc_install_hidden_until';
 const hiddenForNow = () => {
   try { return Date.now() < Number(localStorage.getItem(HIDE_KEY) || 0); } catch { return false; }
 };
-const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
 const isPhone = () => window.matchMedia('(max-width: 720px)').matches;
 
-// "Install the app" card on phones. Chrome / Android gives a real install prompt; Safari has
-// none, so iPhone users get the two steps instead. "Not now" hides it for 30 days.
-export default function InstallPrompt() {
-  const [deferred, setDeferred] = useState(null);
-  const [ios, setIos] = useState(false);
-  const [gone, setGone] = useState(false);
+function InstallGuide() {
+  const [copied, setCopied] = useState(false);
+  const guide = guideFor(navigator.userAgent, navigator.maxTouchPoints);
 
   useEffect(() => {
-    if (standalone() || hiddenForNow()) return undefined;
-    const onPrompt = (e) => { e.preventDefault(); setDeferred(e); };
-    const onInstalled = () => setGone(true);
-    window.addEventListener('beforeinstallprompt', onPrompt);
-    window.addEventListener('appinstalled', onInstalled);
-    if (isIOS() && isPhone()) setIos(true);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
+    const onKey = (e) => { if (e.key === 'Escape') closeInstallGuide(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(window.location.origin);
+      setCopied(true);
+    } catch { /* the address stays visible below for copying by hand */ }
+  }
+
+  return (
+    <div className="modal-backdrop dlg-backdrop" onClick={closeInstallGuide}>
+      <div className="modal-card dlg" role="dialog" aria-modal="true" aria-labelledby="install-title" onClick={(e) => e.stopPropagation()}>
+        <div className="dlg-top">
+          <img className="install-guide-icon" src="/icon-192.png" alt="" width="40" height="40" />
+          <h3 id="install-title">Install the app</h3>
+          <button type="button" className="dlg-x" aria-label="Close" onClick={closeInstallGuide}><X size={18} /></button>
+        </div>
+        <ol className="install-steps">
+          {guide.steps.map((s) => <li key={s}>{s}</li>)}
+        </ol>
+        {guide.openElsewhere && (
+          <button type="button" className="btn btn-primary btn-icon install-copy" onClick={copy}>
+            {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+            {copied ? 'Link copied' : 'Copy link'}
+          </button>
+        )}
+        <p className="install-url">{window.location.host}</p>
+      </div>
+    </div>
+  );
+}
+
+// The "Install the app" card on phones, and the steps sheet every Install button opens. The card
+// shows on every phone browser, not only those that fire the install event. "Not now" hides the
+// card for 30 days; the Install app item in the menu and footer always stays.
+export default function InstallPrompt() {
+  const { canPrompt, guideOpen, installed } = useInstall();
+  const [dismissed, setDismissed] = useState(hiddenForNow);
+  const [phone] = useState(isPhone);
+
   function dismiss() {
-    setGone(true);
+    setDismissed(true);
     try { localStorage.setItem(HIDE_KEY, String(Date.now() + 30 * 24 * 3600 * 1000)); } catch { /* private mode */ }
   }
 
   async function install() {
-    deferred.prompt();
-    const { outcome } = await deferred.userChoice;
-    setDeferred(null);
-    if (outcome !== 'accepted') dismiss();
+    if (await startInstall() === 'dismissed') dismiss();
   }
 
-  if (gone || (!deferred && !ios)) return null;
+  if (installed) return null;
 
   return (
-    <div className="install-card" role="dialog" aria-label="Install the app">
-      <img src="/icon-192.png" alt="" width="44" height="44" />
-      <div className="install-text">
-        <strong>Install the app</strong>
-        {deferred
-          ? <span>Full screen, and it works offline.</span>
-          : <span>Tap <Share size={13} aria-label="Share" className="install-share" /> then &quot;Add to Home Screen&quot;.</span>}
-      </div>
-      {deferred && <button type="button" className="btn btn-primary btn-sm btn-icon" onClick={install}><Download size={15} aria-hidden="true" /> Install</button>}
-      <button type="button" className="install-x" aria-label="Not now" onClick={dismiss}><X size={18} /></button>
-    </div>
+    <>
+      {!dismissed && (phone || canPrompt) && (
+        <div className="install-card" role="region" aria-label="Install the app">
+          <img src="/icon-192.png" alt="" width="44" height="44" />
+          <div className="install-text">
+            <strong>Install the app</strong>
+            <span>Full screen, and it works offline.</span>
+          </div>
+          <button type="button" className="btn btn-primary btn-sm btn-icon" onClick={install}><Download size={15} aria-hidden="true" /> Install</button>
+          <button type="button" className="install-x" aria-label="Not now" onClick={dismiss}><X size={18} /></button>
+        </div>
+      )}
+      {guideOpen && <InstallGuide />}
+    </>
   );
 }

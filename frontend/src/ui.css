@@ -429,3 +429,26 @@ html:has(.sc-wrap.playing) .install-card { display: none; }
 
 /* table rows become stacked cards on phones: a row hover would paint each cell as a separate patch */
 @media (max-width: 720px) { tr:hover td { background: transparent; } }
+
+/* ---------- install app: menu + footer buttons, steps sheet ---------- */
+.nav-install { display: none; }
+.footer-links button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.86rem;
+  color: var(--gold-light); background: rgba(59,182,220,0.1); border: 1px solid rgba(59,182,220,0.4); transition: background 0.2s ease;
+}
+.footer-links button:hover { background: rgba(59,182,220,0.2); }
+.install-guide-icon { flex: none; border-radius: 10px; }
+.install-steps { margin: 6px 0 14px; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 12px; color: #374151; line-height: 1.45; }
+.install-steps li { counter-increment: step; position: relative; padding-left: 38px; min-height: 26px; }
+.install-steps li::before {
+  content: counter(step); position: absolute; left: 0; top: -1px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #e7f6fb; color: var(--gold-ink); font-weight: 700; font-size: 0.85rem;
+}
+.install-copy { width: 100%; justify-content: center; padding: 12px; margin-bottom: 10px; }
+.install-url { margin: 0; text-align: center; color: #6b7280; font-size: 0.82rem; user-select: all; }
+@media (max-width: 960px) {
+  .navbar nav .nav-install {
+    display: flex; align-items: center; gap: 7px; width: 100%; padding: 13px 14px; border-radius: 12px; border: none; cursor: pointer; text-align: left;
+    font: 600 1rem var(--font-body); color: var(--gold-light); background: rgba(59,182,220,0.1);
+  }
+}

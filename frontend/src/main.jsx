@@ -6,6 +6,7 @@ import './index.css';
 import './motion.css';
 import './ui.css';
 import { startMotion } from './motion';
+import './install'; // listens for the browser's install event from the very start
 
 startMotion();
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, CalendarDays, Trophy, Swords, ShieldCheck, LogIn, Menu, X } from 'lucide-react';
+import { Home, Users, CalendarDays, Trophy, Swords, ShieldCheck, LogIn, Menu, X, Download } from 'lucide-react';
 import { isLoggedIn } from '../api';
+import { startInstall, useInstall } from '../install';
 
 export default function Navbar() {
   const { pathname, search } = useLocation();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { installed } = useInstall();
 
   // Glass + shadow once the page scrolls; close the phone menu on every page change.
   useEffect(() => {
@@ -48,6 +50,12 @@ export default function Navbar() {
               </Link>
             );
           })}
+          {!installed && (
+            <button type="button" className="nav-install" onClick={() => { setOpen(false); startInstall(); }}>
+              <Download size={17} strokeWidth={2.2} aria-hidden="true" />
+              <span>Install app</span>
+            </button>
+          )}
         </nav>
       </div>
     </header>
